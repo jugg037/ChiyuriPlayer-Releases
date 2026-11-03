@@ -62,6 +62,29 @@ jobs:
                   last = i
           PY
 
+      - name: Apply navigation contrast
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("app/src/main/java/com/chiyuri/player/MainActivity.kt")
+          s = p.read_text(encoding="utf-8")
+          old = '                            label = { Text(item, fontSize = 10.sp) }\n                        )'
+          new = '''                            label = { Text(item, fontSize = 10.sp) },
+                            colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color.White,
+                                selectedTextColor = Color(0xFFFFE8ED),
+                                indicatorColor = Color(0xFF8B001B),
+                                unselectedIconColor = Color(0xFFFF718B),
+                                unselectedTextColor = Color(0xFFD69AA5)
+                            )
+                        )'''
+          if old not in s:
+              raise SystemExit("NavigationBarItem label marker not found; refusing partial contrast patch.")
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding="utf-8")
+          print("Applied distinct selected/unselected navigation icon and label colors.")
+          PY
+
       - name: Repair Kotlin compile issues in update screens
         run: |
           python3 - <<'PY'
@@ -335,8 +358,8 @@ jobs:
 
           gradle = Path("app/build.gradle.kts")
           g = gradle.read_text(encoding="utf-8")
-          g = g.replace('versionName = "0.2.8"', 'versionName = "0.2.8"')
-          g = g.replace('versionName = "0.2.1"', 'versionName = "0.2.8"')
+          g = g.replace('versionName = "0.2.8"', 'versionName = "0.2.9"')
+          g = g.replace('versionName = "0.2.1"', 'versionName = "0.2.9"')
           g = g.replace("buildFeatures { compose = true }", "buildFeatures { compose = true; buildConfig = true }")
           if "buildConfig = true" not in g:
               raise SystemExit("Could not enable BuildConfig generation.")
@@ -508,7 +531,7 @@ jobs:
           test -n "$CHIYURI_KEYSTORE_PASSWORD"
           test -n "$CHIYURI_KEY_ALIAS"
           test -n "$CHIYURI_KEY_PASSWORD"
-          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=208
+          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=209
 
       - name: Verify APK signature
         run: |
@@ -520,10 +543,10 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChiyuriPlayer-0.2.8
+          name: ChiyuriPlayer-0.2.9
           path: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.8.sha256
+            ChiyuriPlayer-0.2.9.sha256
           if-no-files-found: error
           retention-days: 30
 
@@ -533,11 +556,11 @@ jobs:
           tag_name: v0.2.9
           name: ChiyuriPlayer 0.2.9
           body: |
-            Развёрнутый мини-плеер с прозрачностью 90%, насыщенные готические иконки, контрастные кнопки и размытие общего фона 10dp.
+            Развёрнутый мини-плеер с прозрачностью 90%, насыщенные готические иконки, контрастные кнопки и размытие общего фона 2dp.
             Unit-тесты и проверка подписи должны завершиться успешно.
             APK подписан тем же постоянным ключом, что и предыдущая версия.
           files: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.8.sha256
+            ChiyuriPlayer-0.2.9.sha256
           make_latest: true
           fail_on_unmatched_files: true
