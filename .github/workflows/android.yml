@@ -270,6 +270,129 @@ jobs:
           print("Removed logo shadow blur; expanded lyrics lookup to LRCLIB, lyrics.ovh and Deezer suggestions.")
           PY
 
+      - name: Apply Gothic controls, mini-player transparency and live installed version
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path("app/src/main")
+          main = root / "java/com/chiyuri/player/MainActivity.kt"
+          m = main.read_text(encoding="utf-8")
+          old_surface = "color = MaterialTheme.colorScheme.surface,"
+          if old_surface not in m:
+              raise SystemExit("Mini-player Surface color not found.")
+          mini_start = m.index("private fun MiniPlayerBar(")
+          mini_end = m.index("\n@Composable", mini_start + 20)
+          mini = m[mini_start:mini_end]
+          if old_surface not in mini:
+              raise SystemExit("Mini-player surface color marker not found in MiniPlayerBar.")
+          mini = mini.replace(old_surface, "color = MaterialTheme.colorScheme.surface.copy(alpha = if (expanded) 0.5f else 1f),", 1)
+          m = m[:mini_start] + mini + m[mini_end:]
+
+          theme_old = "MaterialTheme(colorScheme = colors, content = content)"
+          theme_new = """MaterialTheme(
+              colorScheme = colors.copy(primary = Color(0xFFB20D24), secondary = Color(0xFF7A1024)),
+              shapes = androidx.compose.material3.Shapes(
+                  extraSmall = androidx.compose.foundation.shape.CutCornerShape(4.dp),
+                  small = androidx.compose.foundation.shape.CutCornerShape(7.dp),
+                  medium = androidx.compose.foundation.shape.CutCornerShape(11.dp),
+                  large = androidx.compose.foundation.shape.CutCornerShape(16.dp),
+                  extraLarge = androidx.compose.foundation.shape.CutCornerShape(20.dp)
+              ),
+              content = content
+          )"""
+          if theme_old not in m:
+              raise SystemExit("ChiyuriTheme MaterialTheme marker not found.")
+          m = m.replace(theme_old, theme_new, 1)
+          main.write_text(m, encoding="utf-8")
+
+          gradle = Path("app/build.gradle.kts")
+          g = gradle.read_text(encoding="utf-8")
+          g = g.replace('versionName = "0.2.5"', 'versionName = "0.2.6"')
+          g = g.replace('versionName = "0.2.1"', 'versionName = "0.2.6"')
+          g = g.replace("buildFeatures { compose = true }", "buildFeatures { compose = true; buildConfig = true }")
+          if "buildConfig = true" not in g:
+              raise SystemExit("Could not enable BuildConfig generation.")
+          gradle.write_text(g, encoding="utf-8")
+
+          updates = root / "java/com/chiyuri/player/AppUpdates.kt"
+          u = updates.read_text(encoding="utf-8")
+          u = u.replace('const val CURRENT_VERSION = "0.2.1"', 'const val CURRENT_VERSION = BuildConfig.VERSION_NAME')
+          u = u.replace("const val CURRENT_VERSION_CODE = 201", "const val CURRENT_VERSION_CODE = BuildConfig.VERSION_CODE")
+          if "BuildConfig.VERSION_NAME" not in u or "BuildConfig.VERSION_CODE" not in u:
+              raise SystemExit("Installed version constants could not be updated.")
+          updates.write_text(u, encoding="utf-8")
+
+          gothic = root / "java/com/chiyuri/player/GothicUi.kt"
+          gothic.write_text("""package com.chiyuri.player
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.matchParentSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContentColor
+import androidx.compose.ui.unit.dp
+
+private val GothicFrame = Color(0xFF9E1028)
+
+@Composable
+internal fun GothicIcon(
+    imageVector: ImageVector,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    tint: Color = LocalContentColor.current
+) {
+    Box(
+        modifier = modifier.defaultMinSize(minWidth = 24.dp, minHeight = 24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(Modifier.matchParentSize().padding(1.dp)) {
+            val inset = size.minDimension * 0.13f
+            val path = Path().apply {
+                moveTo(size.width / 2f, inset)
+                lineTo(size.width - inset, size.height / 2f)
+                lineTo(size.width / 2f, size.height - inset)
+                lineTo(inset, size.height / 2f)
+                close()
+            }
+            drawPath(path, GothicFrame.copy(alpha = 0.82f), style = Stroke(width = 1.dp.toPx()))
+            val inner = Path().apply {
+                moveTo(size.width / 2f, inset * 2.1f)
+                lineTo(size.width - inset * 2.1f, size.height / 2f)
+                lineTo(size.width / 2f, size.height - inset * 2.1f)
+                lineTo(inset * 2.1f, size.height / 2f)
+                close()
+            }
+            drawPath(inner, GothicFrame.copy(alpha = 0.24f), style = Stroke(width = 0.6.dp.toPx()))
+        }
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            modifier = Modifier.padding(3.dp),
+            tint = tint
+        )
+    }
+}
+""", encoding="utf-8")
+
+          for name in ("MainActivity.kt", "AppUpdates.kt", "TrackDetailsComponents.kt"):
+              file = root / "java/com/chiyuri/player" / name
+              content = file.read_text(encoding="utf-8")
+              content = content.replace("Icon(", "GothicIcon(")
+              file.write_text(content, encoding="utf-8")
+
+          print("Expanded mini-player transparency to 50%, tied installed version to BuildConfig, and applied Gothic icon frames/cut-corner controls.")
+          PY
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -302,7 +425,7 @@ jobs:
           test -s "$RUNNER_TEMP/chiyuri-signing/release.jks"
 
       - name: Run unit tests
-        run: gradle testDebugUnitTest -PVERSION_CODE=205
+        run: gradle testDebugUnitTest -PVERSION_CODE=206
 
       - name: Build signed release APK
         env:
@@ -314,36 +437,36 @@ jobs:
           test -n "$CHIYURI_KEYSTORE_PASSWORD"
           test -n "$CHIYURI_KEY_ALIAS"
           test -n "$CHIYURI_KEY_PASSWORD"
-          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=205
+          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=206
 
       - name: Verify APK signature
         run: |
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
-          sha256sum "$APK" | tee ChiyuriPlayer-0.2.5.sha256
+          sha256sum "$APK" | tee ChiyuriPlayer-0.2.6.sha256
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChiyuriPlayer-0.2.5
+          name: ChiyuriPlayer-0.2.6
           path: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.5.sha256
+            ChiyuriPlayer-0.2.6.sha256
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.2.5
-          name: ChiyuriPlayer 0.2.5
+          tag_name: v0.2.6
+          name: ChiyuriPlayer 0.2.6
           body: |
-            Уточнённый готический логотип без размытия; расширенный поиск текстов LRCLIB + lyrics.ovh с поиском вариантов через Deezer.
+            Прозрачность мини-плеера 50%, версия из BuildConfig, готические иконки и угловатые кнопки.
             Unit-тесты и проверка подписи должны завершиться успешно.
             APK подписан тем же постоянным ключом, что и предыдущая версия.
           files: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.5.sha256
+            ChiyuriPlayer-0.2.6.sha256
           make_latest: true
           fail_on_unmatched_files: true
