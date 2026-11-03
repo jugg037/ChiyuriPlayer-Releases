@@ -35,6 +35,33 @@ jobs:
           test -f /tmp/chiyuri-source/ChiyuriPlayer-main/app/build.gradle.kts
           rsync -a --exclude='.github/' --exclude='README.md' --exclude='README_RU.md' /tmp/chiyuri-source/ChiyuriPlayer-main/ "$GITHUB_WORKSPACE"/
 
+      - name: Inspect Compose navigation and lyrics source
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          targets = {
+              "MainActivity.kt": ["private fun MiniPlayerBar(", "NavigationBar(", "NavigationBarItem(", "private fun Lyrics", "LyricsScreen("],
+              "LyricsScreen.kt": ["@Composable", "LazyColumn", "verticalScroll", "Search"],
+              "LyricsRepository.kt": ["data class Lyrics", "suspend fun search(", "private fun parseCandidate"]
+          }
+          base = Path("app/src/main/java/com/chiyuri/player")
+          for filename, markers in targets.items():
+              path = base / filename
+              lines = path.read_text(encoding="utf-8").splitlines()
+              print(f"\\n===== {filename} ({len(lines)} lines) =====")
+              selected = set()
+              for marker in markers:
+                  for i, line in enumerate(lines):
+                      if marker in line:
+                          selected.update(range(max(0, i-8), min(len(lines), i+65)))
+                          break
+              last = -2
+              for i in sorted(selected):
+                  if i > last + 1: print("...")
+                  print(f"{i+1}: {lines[i]}")
+                  last = i
+          PY
+
       - name: Repair Kotlin compile issues in update screens
         run: |
           python3 - <<'PY'
@@ -98,7 +125,7 @@ jobs:
           main.write_text(m, encoding="utf-8")
           palette = Path("app/src/main/java/com/chiyuri/player/TrackArtworkBackdrop.kt")
           t = palette.read_text(encoding="utf-8")
-          t = t.replace('modifier = Modifier.fillMaxSize().blur(38.dp).alpha(0.42f)', 'modifier = Modifier.fillMaxSize().blur(10.dp).alpha(0.38f)')
+          t = t.replace('modifier = Modifier.fillMaxSize().blur(38.dp).alpha(0.42f)', 'modifier = Modifier.fillMaxSize().blur(2.dp).alpha(0.38f)')
           marker = "        val colors = androidx.compose.material3.MaterialTheme.colorScheme" + chr(10)
           blood_lines = [
               "        val colors = androidx.compose.material3.MaterialTheme.colorScheme",
@@ -265,7 +292,7 @@ jobs:
           screen.write_text(ui, encoding="utf-8")
 
           gradle = Path("app/build.gradle.kts")
-          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.2.1"', 'versionName = "0.2.8"')
+          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.2.9"', 'versionName = "0.2.9"')
           gradle.write_text(g, encoding="utf-8")
           print("Removed logo shadow blur; expanded lyrics lookup to LRCLIB, lyrics.ovh and Deezer suggestions.")
           PY
@@ -469,7 +496,7 @@ jobs:
           test -s "$RUNNER_TEMP/chiyuri-signing/release.jks"
 
       - name: Run unit tests
-        run: gradle testDebugUnitTest -PVERSION_CODE=208
+        run: gradle testDebugUnitTest -PVERSION_CODE=209
 
       - name: Build signed release APK
         env:
@@ -488,7 +515,7 @@ jobs:
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
-          sha256sum "$APK" | tee ChiyuriPlayer-0.2.8.sha256
+          sha256sum "$APK" | tee ChiyuriPlayer-0.2.9.sha256
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -503,8 +530,8 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.2.8
-          name: ChiyuriPlayer 0.2.8
+          tag_name: v0.2.9
+          name: ChiyuriPlayer 0.2.9
           body: |
             Развёрнутый мини-плеер с прозрачностью 90%, насыщенные готические иконки, контрастные кнопки и размытие общего фона 10dp.
             Unit-тесты и проверка подписи должны завершиться успешно.
