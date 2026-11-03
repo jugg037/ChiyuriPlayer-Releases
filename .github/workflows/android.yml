@@ -595,12 +595,9 @@ jobs:
               LaunchedEffect(uri, title, artist) {
                   lyrics = null
                   if (uri != null) {
-                      val embedded = withContext(Dispatchers.IO) {
-                          TrackMetadataRepository.readEmbeddedLyricsResult(
-                              context, uri
-                          )
+                      lyrics = withContext(Dispatchers.IO) {
+                          LyricsRepository.search(artist, title, player.duration.coerceAtLeast(0L))
                       }
-                      lyrics = embedded ?: LyricsRepository.search(artist, title, player.duration.coerceAtLeast(0L))
                   }
               }
               LaunchedEffect(player) {
