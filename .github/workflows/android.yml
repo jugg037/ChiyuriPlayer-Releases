@@ -63,7 +63,7 @@ jobs:
           test -s "$RUNNER_TEMP/chiyuri-signing/release.jks"
 
       - name: Run unit tests
-        run: gradle testDebugUnitTest -PVERSION_CODE=200
+        run: gradle testDebugUnitTest -PVERSION_CODE=201
 
       - name: Build signed release APK
         env:
@@ -75,36 +75,36 @@ jobs:
           test -n "$CHIYURI_KEYSTORE_PASSWORD"
           test -n "$CHIYURI_KEY_ALIAS"
           test -n "$CHIYURI_KEY_PASSWORD"
-          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=200
+          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=201
 
       - name: Verify APK signature
         run: |
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
-          sha256sum "$APK" | tee ChiyuriPlayer-0.2.0.sha256
+          sha256sum "$APK" | tee ChiyuriPlayer-0.2.1.sha256
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChiyuriPlayer-0.2.0
+          name: ChiyuriPlayer-0.2.1
           path: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.0.sha256
+            ChiyuriPlayer-0.2.1.sha256
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.2.0
-          name: ChiyuriPlayer 0.2.0
+          tag_name: v0.2.1
+          name: ChiyuriPlayer 0.2.1
           body: |
-            Первая публичная сборка из репозитория ChiyuriPlayer-Releases.
+            Обновление ChiyuriPlayer 0.2.1.
             Unit-тесты и проверка подписи должны завершиться успешно.
-            Подпись APK создана новым постоянным ключом проекта.
+            APK подписан тем же постоянным ключом, что и предыдущая версия.
           files: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.0.sha256
+            ChiyuriPlayer-0.2.1.sha256
           make_latest: true
           fail_on_unmatched_files: true
