@@ -148,113 +148,113 @@ jobs:
           start = s.index("    suspend fun search(")
           end = s.index("    private fun addSearchResults", start)
           replacement = r'''    suspend fun search(artist: String, title: String, durationMs: Long): LyricsResult? =
-        withContext(Dispatchers.IO) {
-            val cleanTitle = title.trim()
-            if (cleanTitle.isBlank()) return@withContext null
-            val cleanArtist = artist.trim()
-            val durationSeconds = (durationMs / 1000L).takeIf { it > 0L }
-            val titleVariants = lyricsTitleVariants(cleanTitle)
-            val artistVariants = lyricsArtistVariants(cleanArtist)
-            val candidates = linkedMapOf<String, LyricsCandidate>()
-
-            // Primary provider: LRCLIB, including exact and broad metadata search.
-            for (titleVariant in titleVariants.take(3)) {
-                for (artistVariant in (artistVariants.take(2) + "").distinct()) {
-                    val path = buildString {
-                        append("/api/get?track_name=").append(encode(titleVariant))
-                        if (artistVariant.isNotBlank()) append("&artist_name=").append(encode(artistVariant))
-                        if (durationSeconds != null) append("&duration=").append(durationSeconds)
-                    }
-                    val raw = request(path) ?: continue
-                    val candidate = runCatching { parseCandidate(JSONObject(raw)) }.getOrNull() ?: continue
-                    candidates.putIfAbsent(candidateKey(candidate), candidate)
-                    if (isStrongMatch(candidate, cleanTitle, cleanArtist, durationSeconds)) return@withContext candidate.result
-                }
-            }
-            for (titleVariant in titleVariants) {
-                for (artistVariant in (artistVariants.take(2) + "").distinct()) {
-                    val path = buildString {
-                        append("/api/search?track_name=").append(encode(titleVariant))
-                        if (artistVariant.isNotBlank()) append("&artist_name=").append(encode(artistVariant))
-                    }
-                    addSearchResults(request(path), candidates)
-                }
-            }
-            val freeText = listOf(cleanArtist, cleanTitle).filter { it.isNotBlank() }.joinToString(" ")
-            if (freeText.isNotBlank()) addSearchResults(request("/api/search?q=" + encode(freeText)), candidates)
-            val bestLrcLib = candidates.values
-                .map { it to lyricsCandidateScore(it, cleanTitle, cleanArtist, durationSeconds) }
-                .maxByOrNull { it.second }
-            if (bestLrcLib != null && bestLrcLib.second >= 0.50) return@withContext bestLrcLib.first.result
-
-            // Secondary provider: lyrics.ovh direct title/artist lookup (plain lyrics).
-            for (titleVariant in titleVariants.take(2)) {
-                for (artistVariant in artistVariants.take(2)) {
-                    val raw = requestAbsolute("https://api.lyrics.ovh/v1/${encodePath(artistVariant)}/${encodePath(titleVariant)}") ?: continue
-                    val text = runCatching { JSONObject(raw).optString("lyrics") }.getOrNull()
-                        ?.takeIf { it.isNotBlank() && it != "null" } ?: continue
-                    return@withContext LyricsResult(text, null)
-                }
-            }
-
-            // Final fallback: Deezer-backed suggestions from lyrics.ovh; rank before fetching.
-            val suggestions = linkedMapOf<String, JSONObject>()
-            val queries = listOf("$cleanArtist $cleanTitle", cleanTitle).filter { it.isNotBlank() }.distinct()
-            for (query in queries) {
-                val raw = requestAbsolute("https://api.lyrics.ovh/suggest/${encodePath(query)}") ?: continue
-                val data = runCatching { JSONObject(raw).optJSONArray("data") }.getOrNull() ?: continue
-                for (index in 0 until minOf(data.length(), 12)) {
-                    val item = data.optJSONObject(index) ?: continue
-                    val trackTitle = item.optString("title")
-                    val trackArtist = item.optJSONObject("artist")?.optString("name").orEmpty()
-                    if (trackTitle.isBlank() || trackArtist.isBlank()) continue
-                    suggestions.putIfAbsent("${normalizeLyricsText(trackTitle)}|${normalizeLyricsText(trackArtist)}", item)
-                }
-            }
-            val ranked = suggestions.values.mapNotNull { item ->
-                val trackTitle = item.optString("title")
-                val trackArtist = item.optJSONObject("artist")?.optString("name").orEmpty()
-                val trackDuration = item.optLong("duration").takeIf { it > 0L } ?: 0L
-                val candidate = LyricsCandidate(LyricsResult(null, null), trackTitle, trackArtist, trackDuration)
-                candidate to lyricsCandidateScore(candidate, cleanTitle, cleanArtist, durationSeconds)
-            }.sortedByDescending { it.second }
-            for ((candidate, score) in ranked.take(4)) {
-                if (score < 0.58) continue
-                val raw = requestAbsolute("https://api.lyrics.ovh/v1/${encodePath(candidate.artist)}/${encodePath(candidate.title)}") ?: continue
-                val text = runCatching { JSONObject(raw).optString("lyrics") }.getOrNull()
-                    ?.takeIf { it.isNotBlank() && it != "null" } ?: continue
-                return@withContext LyricsResult(text, null)
-            }
-            null
-        }
-
-'''
+                  withContext(Dispatchers.IO) {
+                      val cleanTitle = title.trim()
+                      if (cleanTitle.isBlank()) return@withContext null
+                      val cleanArtist = artist.trim()
+                      val durationSeconds = (durationMs / 1000L).takeIf { it > 0L }
+                      val titleVariants = lyricsTitleVariants(cleanTitle)
+                      val artistVariants = lyricsArtistVariants(cleanArtist)
+                      val candidates = linkedMapOf<String, LyricsCandidate>()
+          
+                      // Primary provider: LRCLIB, including exact and broad metadata search.
+                      for (titleVariant in titleVariants.take(3)) {
+                          for (artistVariant in (artistVariants.take(2) + "").distinct()) {
+                              val path = buildString {
+                                  append("/api/get?track_name=").append(encode(titleVariant))
+                                  if (artistVariant.isNotBlank()) append("&artist_name=").append(encode(artistVariant))
+                                  if (durationSeconds != null) append("&duration=").append(durationSeconds)
+                              }
+                              val raw = request(path) ?: continue
+                              val candidate = runCatching { parseCandidate(JSONObject(raw)) }.getOrNull() ?: continue
+                              candidates.putIfAbsent(candidateKey(candidate), candidate)
+                              if (isStrongMatch(candidate, cleanTitle, cleanArtist, durationSeconds)) return@withContext candidate.result
+                          }
+                      }
+                      for (titleVariant in titleVariants) {
+                          for (artistVariant in (artistVariants.take(2) + "").distinct()) {
+                              val path = buildString {
+                                  append("/api/search?track_name=").append(encode(titleVariant))
+                                  if (artistVariant.isNotBlank()) append("&artist_name=").append(encode(artistVariant))
+                              }
+                              addSearchResults(request(path), candidates)
+                          }
+                      }
+                      val freeText = listOf(cleanArtist, cleanTitle).filter { it.isNotBlank() }.joinToString(" ")
+                      if (freeText.isNotBlank()) addSearchResults(request("/api/search?q=" + encode(freeText)), candidates)
+                      val bestLrcLib = candidates.values
+                          .map { it to lyricsCandidateScore(it, cleanTitle, cleanArtist, durationSeconds) }
+                          .maxByOrNull { it.second }
+                      if (bestLrcLib != null && bestLrcLib.second >= 0.50) return@withContext bestLrcLib.first.result
+          
+                      // Secondary provider: lyrics.ovh direct title/artist lookup (plain lyrics).
+                      for (titleVariant in titleVariants.take(2)) {
+                          for (artistVariant in artistVariants.take(2)) {
+                              val raw = requestAbsolute("https://api.lyrics.ovh/v1/${encodePath(artistVariant)}/${encodePath(titleVariant)}") ?: continue
+                              val text = runCatching { JSONObject(raw).optString("lyrics") }.getOrNull()
+                                  ?.takeIf { it.isNotBlank() && it != "null" } ?: continue
+                              return@withContext LyricsResult(text, null)
+                          }
+                      }
+          
+                      // Final fallback: Deezer-backed suggestions from lyrics.ovh; rank before fetching.
+                      val suggestions = linkedMapOf<String, JSONObject>()
+                      val queries = listOf("$cleanArtist $cleanTitle", cleanTitle).filter { it.isNotBlank() }.distinct()
+                      for (query in queries) {
+                          val raw = requestAbsolute("https://api.lyrics.ovh/suggest/${encodePath(query)}") ?: continue
+                          val data = runCatching { JSONObject(raw).optJSONArray("data") }.getOrNull() ?: continue
+                          for (index in 0 until minOf(data.length(), 12)) {
+                              val item = data.optJSONObject(index) ?: continue
+                              val trackTitle = item.optString("title")
+                              val trackArtist = item.optJSONObject("artist")?.optString("name").orEmpty()
+                              if (trackTitle.isBlank() || trackArtist.isBlank()) continue
+                              suggestions.putIfAbsent("${normalizeLyricsText(trackTitle)}|${normalizeLyricsText(trackArtist)}", item)
+                          }
+                      }
+                      val ranked = suggestions.values.mapNotNull { item ->
+                          val trackTitle = item.optString("title")
+                          val trackArtist = item.optJSONObject("artist")?.optString("name").orEmpty()
+                          val trackDuration = item.optLong("duration").takeIf { it > 0L } ?: 0L
+                          val candidate = LyricsCandidate(LyricsResult(null, null), trackTitle, trackArtist, trackDuration)
+                          candidate to lyricsCandidateScore(candidate, cleanTitle, cleanArtist, durationSeconds)
+                      }.sortedByDescending { it.second }
+                      for ((candidate, score) in ranked.take(4)) {
+                          if (score < 0.58) continue
+                          val raw = requestAbsolute("https://api.lyrics.ovh/v1/${encodePath(candidate.artist)}/${encodePath(candidate.title)}") ?: continue
+                          val text = runCatching { JSONObject(raw).optString("lyrics") }.getOrNull()
+                              ?.takeIf { it.isNotBlank() && it != "null" } ?: continue
+                          return@withContext LyricsResult(text, null)
+                      }
+                      null
+                  }
+          
+          '''
           s = s[:start] + replacement + s[end:]
           request_start = s.index("    private fun request(path: String): String? {")
           request_end = s.index("    private fun parseCandidate", request_start)
           request_block = '''    private fun request(path: String): String? = requestAbsolute("https://lrclib.net$path")
-
-    private fun requestAbsolute(address: String): String? {
-        val connection = (URL(address).openConnection() as HttpURLConnection)
-        return try {
-            connection.requestMethod = "GET"
-            connection.connectTimeout = 5_000
-            connection.readTimeout = 5_000
-            connection.setRequestProperty("Accept", "application/json")
-            connection.setRequestProperty("User-Agent", "ChiyuriPlayer/0.2.5 (https://github.com/jugg037/ChiyuriPlayer-Releases)")
-            if (connection.responseCode !in 200..299) return null
-            connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-        } catch (_: Exception) {
-            null
-        } finally {
-            connection.disconnect()
-        }
-    }
-
-    private fun encodePath(value: String): String =
-        URLEncoder.encode(value, Charsets.UTF_8.name()).replace("+", "%20")
-
-'''
+          
+              private fun requestAbsolute(address: String): String? {
+                  val connection = (URL(address).openConnection() as HttpURLConnection)
+                  return try {
+                      connection.requestMethod = "GET"
+                      connection.connectTimeout = 5_000
+                      connection.readTimeout = 5_000
+                      connection.setRequestProperty("Accept", "application/json")
+                      connection.setRequestProperty("User-Agent", "ChiyuriPlayer/0.2.5 (https://github.com/jugg037/ChiyuriPlayer-Releases)")
+                      if (connection.responseCode !in 200..299) return null
+                      connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                  } catch (_: Exception) {
+                      null
+                  } finally {
+                      connection.disconnect()
+                  }
+              }
+          
+              private fun encodePath(value: String): String =
+                  URLEncoder.encode(value, Charsets.UTF_8.name()).replace("+", "%20")
+          
+          '''
           s = s[:request_start] + request_block + s[request_end:]
           lyrics.write_text(s, encoding="utf-8")
 
