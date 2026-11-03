@@ -140,7 +140,7 @@ jobs:
           from pathlib import Path
           main = Path("app/src/main/java/com/chiyuri/player/MainActivity.kt")
           m = main.read_text(encoding="utf-8")
-          m = m.replace(", style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color(0xFFFF2038), offset=androidx.compose.ui.geometry.Offset(0f, 2f), blurRadius=9f))", "")
+          m = m.replace(", style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color(0xFFFF2038), offset = androidx.compose.ui.geometry.Offset(0f, 2f), blurRadius = 9f))", "")
           main.write_text(m, encoding="utf-8")
 
           lyrics = Path("app/src/main/java/com/chiyuri/player/LyricsRepository.kt")
