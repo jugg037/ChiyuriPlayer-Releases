@@ -408,7 +408,7 @@ jobs:
               onClick: () -> Unit,
               modifier: Modifier = Modifier,
               enabled: Boolean = true,
-              content: @Composable RowScope.() -> Unit
+              content: @Composable () -> Unit
           ) {
               Box(modifier = modifier.clip(ChiyuriGothicShape)
                   .background(Color(0xFF17070B))
@@ -425,9 +425,8 @@ jobs:
               if not path.exists():
                   continue
               text = path.read_text(encoding="utf-8")
-              text = text.replace("androidx.compose.material3.Icon(", "__GOTHIC_ICON__(")
-              text = text.replace("Icon(", "GothicIcon(")
-              text = text.replace("__GOTHIC_ICON__(", "GothicIcon(")
+              import re
+              text = re.sub(r"(?<![A-Za-z0-9_])Icon\\(", "GothicIcon(", text)
               if name == "MainActivity.kt":
                   text = text.replace("IconButton(", "GothicIconButton(")
               path.write_text(text, encoding="utf-8")
