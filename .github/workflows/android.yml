@@ -54,7 +54,14 @@ jobs:
           s = s.replace("installed.signingInfo.apkContentsSigners", "installed.signingInfo?.apkContentsSigners")
           s = s.replace("androidx.compose.material3.Row(", "androidx.compose.foundation.layout.Row(")
           p.write_text(s, encoding="utf-8")
-          print("Applied Compose state imports, nullable SigningInfo handling, and Row namespace fix.")
+          main = Path("app/src/main/java/com/chiyuri/player/MainActivity.kt")
+          m = main.read_text(encoding="utf-8")
+          old = "modifier = modifier.fillMaxWidth().verticalScroll(rememberScrollState()),"
+          if old not in m:
+              raise SystemExit("AudioEffectsScreen scroll modifier was not found; refusing unsafe patch.")
+          m = m.replace(old, "modifier = modifier.fillMaxWidth(),", 1)
+          main.write_text(m, encoding="utf-8")
+          print("Fixed nested vertical scrolling in More > Audio Effects.")
           PY
           grep -nE 'runtime.getValue|runtime.setValue|signingInfo\\?\\.apkContentsSigners|foundation.layout.Row' app/src/main/java/com/chiyuri/player/AppUpdates.kt
 
@@ -90,7 +97,7 @@ jobs:
           test -s "$RUNNER_TEMP/chiyuri-signing/release.jks"
 
       - name: Run unit tests
-        run: gradle testDebugUnitTest -PVERSION_CODE=201
+        run: gradle testDebugUnitTest -PVERSION_CODE=202
 
       - name: Build signed release APK
         env:
@@ -102,36 +109,36 @@ jobs:
           test -n "$CHIYURI_KEYSTORE_PASSWORD"
           test -n "$CHIYURI_KEY_ALIAS"
           test -n "$CHIYURI_KEY_PASSWORD"
-          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=201
+          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=202
 
       - name: Verify APK signature
         run: |
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
-          sha256sum "$APK" | tee ChiyuriPlayer-0.2.1.sha256
+          sha256sum "$APK" | tee ChiyuriPlayer-0.2.2.sha256
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChiyuriPlayer-0.2.1
+          name: ChiyuriPlayer-0.2.2
           path: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.1.sha256
+            ChiyuriPlayer-0.2.2.sha256
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.2.1
-          name: ChiyuriPlayer 0.2.1
+          tag_name: v0.2.2
+          name: ChiyuriPlayer 0.2.2
           body: |
-            Обновление ChiyuriPlayer 0.2.1.
+            Исправление аварийного закрытия раздела «Ещё» в ChiyuriPlayer 0.2.2.
             Unit-тесты и проверка подписи должны завершиться успешно.
             APK подписан тем же постоянным ключом, что и предыдущая версия.
           files: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.1.sha256
+            ChiyuriPlayer-0.2.2.sha256
           make_latest: true
           fail_on_unmatched_files: true
