@@ -319,7 +319,7 @@ jobs:
           screen.write_text(ui, encoding="utf-8")
 
           gradle = Path("app/build.gradle.kts")
-          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.2.9"', 'versionName = "0.3.5"')
+          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.2.9"', 'versionName = "0.3.6"')
           gradle.write_text(g, encoding="utf-8")
           print("Removed logo shadow blur; expanded lyrics lookup to LRCLIB, lyrics.ovh and Deezer suggestions.")
           PY
@@ -761,7 +761,7 @@ jobs:
           }
           """, encoding="utf-8")
           gradle = Path("app/build.gradle.kts")
-          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.3.0"', 'versionName = "0.3.5"')
+          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.3.0"', 'versionName = "0.3.6"')
           gradle.write_text(g, encoding="utf-8")
           print("Connected lyrics panel to expanded mini-player; added timed/plain rendering.")
           PY
@@ -773,8 +773,8 @@ jobs:
           import re
           p = Path("app/src/main/java/com/chiyuri/player/MainActivity.kt")
           s = p.read_text(encoding="utf-8")
-          s, preview_count = re.subn(r"^[ \\t]*TrackLyricsPreview\\(player\\)[ \\t]*\\n", "", s, count=1, flags=re.MULTILINE)
-          button_pattern = r"^[ \\t]*TextButton\\(onClick = onEditMetadata, modifier = Modifier\\.align\\(Alignment\\.End\\)\\) \\{\\n.*?^[ \\t]*\\}\\n"
+          s, preview_count = re.subn(r"^[ \t]*TrackLyricsPreview\(player\)[ \t]*\n", "", s, count=1, flags=re.MULTILINE)
+          button_pattern = r"^[ \t]*TextButton\(onClick = onEditMetadata, modifier = Modifier\.align\(Alignment\.End\)\) \{\n.*?^[ \t]*\}\n"
           s, button_count = re.subn(button_pattern, "", s, count=1, flags=re.MULTILINE | re.DOTALL)
           if preview_count != 1 or button_count != 1:
               raise SystemExit(f"Expected to remove one duplicate preview and one metadata button; removed preview={preview_count}, button={button_count}.")
@@ -816,7 +816,7 @@ jobs:
           test -s "$RUNNER_TEMP/chiyuri-signing/release.jks"
 
       - name: Run unit tests
-        run: gradle testDebugUnitTest -PVERSION_CODE=305
+        run: gradle testDebugUnitTest -PVERSION_CODE=306
 
       - name: Build signed release APK
         env:
@@ -828,36 +828,36 @@ jobs:
           test -n "$CHIYURI_KEYSTORE_PASSWORD"
           test -n "$CHIYURI_KEY_ALIAS"
           test -n "$CHIYURI_KEY_PASSWORD"
-          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=305
+          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=306
 
       - name: Verify APK signature
         run: |
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
-          sha256sum "$APK" | tee ChiyuriPlayer-0.3.5.sha256
+          sha256sum "$APK" | tee ChiyuriPlayer-0.3.6.sha256
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChiyuriPlayer-0.3.5
+          name: ChiyuriPlayer-0.3.6
           path: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.3.5.sha256
+            ChiyuriPlayer-0.3.6.sha256
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.3.5
-          name: ChiyuriPlayer 0.3.5
+          tag_name: v0.3.6
+          name: ChiyuriPlayer 0.3.6
           body: |
             Исправлено отображение текста песни в раскрытом мини-плеере: LRC-синхронизация, подсветка текущей строки и обычный прокручиваемый текст. Остальные изменения интерфейса сохранены.
             Unit-тесты и проверка подписи должны завершиться успешно.
             APK подписан тем же постоянным ключом, что и предыдущая версия.
           files: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.3.5.sha256
+            ChiyuriPlayer-0.3.6.sha256
           make_latest: true
           fail_on_unmatched_files: true
