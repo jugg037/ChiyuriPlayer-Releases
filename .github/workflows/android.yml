@@ -35,6 +35,28 @@ jobs:
           test -f /tmp/chiyuri-source/ChiyuriPlayer-main/app/build.gradle.kts
           rsync -a --exclude='.github/' --exclude='README.md' --exclude='README_RU.md' /tmp/chiyuri-source/ChiyuriPlayer-main/ "$GITHUB_WORKSPACE"/
 
+      - name: Repair Kotlin compile issues in update screens
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("app/src/main/java/com/chiyuri/player/AppUpdates.kt")
+          s = p.read_text(encoding="utf-8")
+          changes = {
+              "import androidx.compose.runtime.Composable\\n": "import androidx.compose.runtime.Composable\\nimport androidx.compose.runtime.getValue\\nimport androidx.compose.runtime.setValue\\n",
+              "installed.signingInfo.apkContentsSigners": "installed.signingInfo?.apkContentsSigners",
+              "androidx.compose.material3.Row(": "androidx.compose.foundation.layout.Row("
+          }
+          for old, new in changes.items():
+              if old not in s:
+                  if old in ("installed.signingInfo.apkContentsSigners", "androidx.compose.material3.Row("):
+                      continue
+                  raise SystemExit(f"Expected source pattern not found: {old!r}")
+              s = s.replace(old, new)
+          p.write_text(s, encoding="utf-8")
+          print("Applied Compose state imports, nullable SigningInfo handling, and Row namespace fix.")
+          PY
+          grep -nE 'runtime.getValue|runtime.setValue|signingInfo\?\.apkContentsSigners|foundation.layout.Row' app/src/main/java/com/chiyuri/player/AppUpdates.kt
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
