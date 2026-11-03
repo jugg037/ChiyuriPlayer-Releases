@@ -98,7 +98,7 @@ jobs:
           main.write_text(m, encoding="utf-8")
           palette = Path("app/src/main/java/com/chiyuri/player/TrackArtworkBackdrop.kt")
           t = palette.read_text(encoding="utf-8")
-          t = t.replace('modifier = Modifier.fillMaxSize().blur(38.dp).alpha(0.42f)', 'modifier = Modifier.fillMaxSize().blur(6.dp).alpha(0.38f)')
+          t = t.replace('modifier = Modifier.fillMaxSize().blur(38.dp).alpha(0.42f)', 'modifier = Modifier.fillMaxSize().blur(10.dp).alpha(0.38f)')
           marker = "        val colors = androidx.compose.material3.MaterialTheme.colorScheme" + chr(10)
           blood_lines = [
               "        val colors = androidx.compose.material3.MaterialTheme.colorScheme",
@@ -265,7 +265,7 @@ jobs:
           screen.write_text(ui, encoding="utf-8")
 
           gradle = Path("app/build.gradle.kts")
-          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.2.1"', 'versionName = "0.2.7"')
+          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.2.1"', 'versionName = "0.2.8"')
           gradle.write_text(g, encoding="utf-8")
           print("Removed logo shadow blur; expanded lyrics lookup to LRCLIB, lyrics.ovh and Deezer suggestions.")
           PY
@@ -286,7 +286,7 @@ jobs:
           mini = m[mini_start:mini_end]
           if old_surface not in mini:
               raise SystemExit("Mini-player surface color marker not found in MiniPlayerBar.")
-          mini = mini.replace(old_surface, "color = MaterialTheme.colorScheme.surface.copy(alpha = if (expanded) 0.5f else 1f),", 1)
+          mini = mini.replace(old_surface, "color = MaterialTheme.colorScheme.surface.copy(alpha = if (expanded) 0.9f else 1f),", 1)
           m = m[:mini_start] + mini + m[mini_end:]
 
           theme_old = "MaterialTheme(colorScheme = colors, content = content)"
@@ -308,8 +308,8 @@ jobs:
 
           gradle = Path("app/build.gradle.kts")
           g = gradle.read_text(encoding="utf-8")
-          g = g.replace('versionName = "0.2.7"', 'versionName = "0.2.7"')
-          g = g.replace('versionName = "0.2.1"', 'versionName = "0.2.7"')
+          g = g.replace('versionName = "0.2.8"', 'versionName = "0.2.8"')
+          g = g.replace('versionName = "0.2.1"', 'versionName = "0.2.8"')
           g = g.replace("buildFeatures { compose = true }", "buildFeatures { compose = true; buildConfig = true }")
           if "buildConfig = true" not in g:
               raise SystemExit("Could not enable BuildConfig generation.")
@@ -323,7 +323,7 @@ jobs:
               raise SystemExit("Installed version constants could not be updated.")
           updates.write_text(u, encoding="utf-8")
 
-          print("Expanded mini-player transparency to 50%, tied installed version to BuildConfig, and applied Gothic icon frames/cut-corner controls.")
+          print("Expanded mini-player transparency to 90%, tied installed version to BuildConfig, and applied Gothic icon frames/cut-corner controls.")
           PY
 
       - name: Build true Gothic UI geometry
@@ -381,8 +381,8 @@ jobs:
                   modifier = modifier
                       .size(38.dp)
                       .clip(ChiyuriGothicShape)
-                      .background(Color(0xFF160609))
-                      .border(1.dp, Color(0xFF8F1027), ChiyuriGothicShape)
+                      .background(Color(0xFF3A0712))
+                      .border(1.dp, Color(0xFFFF2448), ChiyuriGothicShape)
                       .padding(8.dp)
               ) {
                   Canvas(Modifier.fillMaxSize()) {
@@ -396,7 +396,7 @@ jobs:
                           lineTo(size.width * 0.5f, size.height - inset)
                           close()
                       }
-                      drawPath(p, Color(0xFF4B0A18), style = Stroke(width = 1.dp.toPx()))
+                      drawPath(p, Color(0xFFB31332), style = Stroke(width = 1.dp.toPx()))
                   }
                   Icon(imageVector = imageVector, contentDescription = contentDescription,
                       modifier = Modifier.fillMaxSize(), tint = tint)
@@ -411,8 +411,8 @@ jobs:
               content: @Composable () -> Unit
           ) {
               Box(modifier = modifier.clip(ChiyuriGothicShape)
-                  .background(Color(0xFF17070B))
-                  .border(1.dp, Color(0xFF781024), ChiyuriGothicShape)) {
+                  .background(Color(0xFF500A1B))
+                  .border(1.dp, Color(0xFFFF3659), ChiyuriGothicShape)) {
                   IconButton(onClick = onClick, enabled = enabled,
                       modifier = Modifier.size(42.dp), content = content)
               }
@@ -469,7 +469,7 @@ jobs:
           test -s "$RUNNER_TEMP/chiyuri-signing/release.jks"
 
       - name: Run unit tests
-        run: gradle testDebugUnitTest -PVERSION_CODE=207
+        run: gradle testDebugUnitTest -PVERSION_CODE=208
 
       - name: Build signed release APK
         env:
@@ -481,36 +481,36 @@ jobs:
           test -n "$CHIYURI_KEYSTORE_PASSWORD"
           test -n "$CHIYURI_KEY_ALIAS"
           test -n "$CHIYURI_KEY_PASSWORD"
-          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=207
+          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=208
 
       - name: Verify APK signature
         run: |
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
-          sha256sum "$APK" | tee ChiyuriPlayer-0.2.7.sha256
+          sha256sum "$APK" | tee ChiyuriPlayer-0.2.8.sha256
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChiyuriPlayer-0.2.7
+          name: ChiyuriPlayer-0.2.8
           path: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.7.sha256
+            ChiyuriPlayer-0.2.8.sha256
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.2.7
-          name: ChiyuriPlayer 0.2.7
+          tag_name: v0.2.8
+          name: ChiyuriPlayer 0.2.8
           body: |
-            Прозрачность мини-плеера 50%, версия из BuildConfig, готические иконки и угловатые кнопки.
+            Развёрнутый мини-плеер с прозрачностью 90%, насыщенные готические иконки, контрастные кнопки и размытие общего фона 10dp.
             Unit-тесты и проверка подписи должны завершиться успешно.
             APK подписан тем же постоянным ключом, что и предыдущая версия.
           files: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.7.sha256
+            ChiyuriPlayer-0.2.8.sha256
           make_latest: true
           fail_on_unmatched_files: true
