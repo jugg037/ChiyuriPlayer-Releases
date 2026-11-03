@@ -315,9 +315,49 @@ jobs:
           screen.write_text(ui, encoding="utf-8")
 
           gradle = Path("app/build.gradle.kts")
-          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.2.9"', 'versionName = "0.2.9"')
+          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.3.0"', 'versionName = "0.2.9"')
           gradle.write_text(g, encoding="utf-8")
           print("Removed logo shadow blur; expanded lyrics lookup to LRCLIB, lyrics.ovh and Deezer suggestions.")
+          PY
+
+      - name: Add SyncLRC independent lyrics provider
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("app/src/main/java/com/chiyuri/player/LyricsRepository.kt")
+          s = p.read_text(encoding="utf-8")
+          marker = "                      // Secondary provider: lyrics.ovh direct title/artist lookup (plain lyrics)."
+          if marker not in s:
+              raise SystemExit("Expected lyrics.ovh fallback marker not found; refusing to patch.")
+          block = """                      // Independent provider: SyncLRC (synced, plain and karaoke-capable catalog).
+                      val syncQuery = encodePath(listOf(cleanArtist, cleanTitle).filter { it.isNotBlank() }.joinToString(" "))
+                      val syncRaw = requestAbsolute("https://api.synclrc.dev/search?q=" + syncQuery + "&limit=8")
+                      val syncResults = runCatching { JSONObject(syncRaw ?: "").optJSONArray("results") }.getOrNull()
+                      val syncCandidates = mutableListOf<Pair<LyricsCandidate, Double>>()
+                      if (syncResults != null) {
+                          for (index in 0 until syncResults.length()) {
+                              val item = syncResults.optJSONObject(index) ?: continue
+                              val nested = item.optJSONObject("lyrics")
+                              val plain = nested?.optString("plain")?.takeIf { it.isNotBlank() && it != "null" }
+                              val synced = nested?.optString("synced")?.takeIf { it.isNotBlank() && it != "null" }
+                                  ?: nested?.optString("karaoke")?.takeIf { it.isNotBlank() && it != "null" }
+                              if (plain == null && synced == null) continue
+                              val candidate = LyricsCandidate(
+                                  LyricsResult(plain, synced),
+                                  item.optString("track"),
+                                  item.optString("artist"),
+                                  item.optLong("duration").takeIf { it > 0L } ?: 0L
+                              )
+                              val score = lyricsCandidateScore(candidate, cleanTitle, cleanArtist, durationSeconds)
+                              if (score >= 0.58) syncCandidates.add(candidate to score)
+                          }
+                      }
+                      syncCandidates.maxByOrNull { it.second }?.first?.let { return@withContext it.result }
+
+          """
+          s = s.replace(marker, block + marker, 1)
+          p.write_text(s, encoding="utf-8")
+          print("Added SyncLRC with metadata scoring and synced/plain lyric parsing.")
           PY
 
       - name: Apply Gothic controls, mini-player transparency and live installed version
@@ -519,7 +559,7 @@ jobs:
           test -s "$RUNNER_TEMP/chiyuri-signing/release.jks"
 
       - name: Run unit tests
-        run: gradle testDebugUnitTest -PVERSION_CODE=209
+        run: gradle testDebugUnitTest -PVERSION_CODE=300
 
       - name: Build signed release APK
         env:
@@ -531,30 +571,30 @@ jobs:
           test -n "$CHIYURI_KEYSTORE_PASSWORD"
           test -n "$CHIYURI_KEY_ALIAS"
           test -n "$CHIYURI_KEY_PASSWORD"
-          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=209
+          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=300
 
       - name: Verify APK signature
         run: |
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
-          sha256sum "$APK" | tee ChiyuriPlayer-0.2.9.sha256
+          sha256sum "$APK" | tee ChiyuriPlayer-0.3.0.sha256
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChiyuriPlayer-0.2.9
+          name: ChiyuriPlayer-0.3.0
           path: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.9.sha256
+            ChiyuriPlayer-0.3.0.sha256
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.2.9
-          name: ChiyuriPlayer 0.2.9
+          tag_name: v0.3.0
+          name: ChiyuriPlayer 0.3.0
           body: |
             Развёрнутый мини-плеер с прозрачностью 90%, насыщенные готические иконки, контрастные кнопки и размытие общего фона 2dp.
             Unit-тесты и проверка подписи должны завершиться успешно.
