@@ -426,30 +426,11 @@ jobs:
                   continue
               text = path.read_text(encoding="utf-8")
               text = text.replace("androidx.compose.material3.Icon(", "GothicIcon(")
+              text = text.replace("Icon(", "GothicIcon(")
               if name == "MainActivity.kt":
                   text = text.replace("IconButton(", "GothicIconButton(")
-              else:
-                  text = text.replace("androidx.compose.material3.IconButton(", "GothicIconButton(")
-              if "import com.chiyuri.player.GothicIcon" not in text:
-                  i = text.find("import ")
-                  if i >= 0:
-                      text = text[:i] + "import com.chiyuri.player.GothicIcon\nimport com.chiyuri.player.GothicIconButton\n" + text[i:]
               path.write_text(text, encoding="utf-8")
 
-          main = base / "MainActivity.kt"
-          m = main.read_text(encoding="utf-8")
-          old = "shapes = androidx.compose.material3.Shapes("
-          if old in m:
-              start = m.index(old)
-              end = m.index("),\n              content = content", start) + 1
-              m = m[:start] + """shapes = androidx.compose.material3.Shapes(
-                  extraSmall = ChiyuriGothicShape,
-                  small = ChiyuriGothicShape,
-                  medium = ChiyuriGothicShape,
-                  large = ChiyuriGothicShape,
-                  extraLarge = ChiyuriGothicShape
-              )""" + m[end:]
-          main.write_text(m, encoding="utf-8")
           print("Installed pointed Gothic panels, framed Gothic glyphs and custom icon buttons.")
           PY
           grep -RIn "GothicIconButton\|GothicIcon(" app/src/main/java/com/chiyuri/player
