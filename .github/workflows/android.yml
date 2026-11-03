@@ -83,6 +83,52 @@ jobs:
           for icon in [Path("app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml"), Path("app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml")]:
               if icon.exists(): icon.unlink()
           print("Applied red/black visual theme, branded header, red artwork-palette defaults, and safe legacy launcher icon resources.")
+          # Blood-red visual direction and fixed Gothic wordmark treatment.
+          import urllib.request
+          font_dir = Path("app/src/main/res/font")
+          font_dir.mkdir(parents=True, exist_ok=True)
+          urllib.request.urlretrieve("https://raw.githubusercontent.com/cyrealtype/UnifracturCook/master/UnifrakturCook-Regular-hints.ttf", font_dir / "unifraktur_cook.ttf")
+          license_path = Path("app/src/main/assets/licenses/UnifrakturCook-OFL.txt")
+          license_path.parent.mkdir(parents=True, exist_ok=True)
+          urllib.request.urlretrieve("https://raw.githubusercontent.com/cyrealtype/UnifracturCook/master/OFL.txt", license_path)
+          main = Path("app/src/main/java/com/chiyuri/player/MainActivity.kt")
+          m = main.read_text(encoding="utf-8")
+          m = m.replace('Text("PLAYER", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, letterSpacing = 3.sp)', '')
+          m = m.replace('Text("Chiyuri", color = MaterialTheme.colorScheme.onSurface, fontSize = 19.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)', 'Text("Chiyuri", color = Color(0xFF8B0000), fontSize = 25.sp, fontFamily = androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(com.chiyuri.player.R.font.unifraktur_cook)), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color(0xFFFF2038), offset = androidx.compose.ui.geometry.Offset(0f, 2f), blurRadius = 9f)))')
+          main.write_text(m, encoding="utf-8")
+          palette = Path("app/src/main/java/com/chiyuri/player/TrackArtworkBackdrop.kt")
+          t = palette.read_text(encoding="utf-8")
+          t = t.replace('modifier = Modifier.fillMaxSize().blur(38.dp).alpha(0.42f)', 'modifier = Modifier.fillMaxSize().blur(6.dp).alpha(0.38f)')
+          marker = '        val colors = androidx.compose.material3.MaterialTheme.colorScheme\n'
+          blood = '''        val colors = androidx.compose.material3.MaterialTheme.colorScheme
+          androidx.compose.foundation.Canvas(Modifier.fillMaxSize().alpha(0.30f)) {
+              val w = size.width
+              val h = size.height
+              val blood = androidx.compose.ui.graphics.Path().apply {
+                  moveTo(0f, 0f)
+                  lineTo(w, 0f)
+                  lineTo(w, h * 0.13f)
+                  cubicTo(w * 0.91f, h * 0.17f, w * 0.94f, h * 0.23f, w * 0.86f, h * 0.25f)
+                  cubicTo(w * 0.78f, h * 0.27f, w * 0.83f, h * 0.34f, w * 0.75f, h * 0.36f)
+                  lineTo(w * 0.72f, h * 0.18f)
+                  cubicTo(w * 0.64f, h * 0.23f, w * 0.68f, h * 0.29f, w * 0.60f, h * 0.30f)
+                  lineTo(w * 0.57f, h * 0.12f)
+                  cubicTo(w * 0.48f, h * 0.17f, w * 0.52f, h * 0.24f, w * 0.44f, h * 0.25f)
+                  lineTo(w * 0.40f, h * 0.10f)
+                  cubicTo(w * 0.31f, h * 0.15f, w * 0.35f, h * 0.22f, w * 0.27f, h * 0.24f)
+                  lineTo(w * 0.24f, h * 0.12f)
+                  cubicTo(w * 0.15f, h * 0.18f, w * 0.18f, h * 0.23f, w * 0.09f, h * 0.25f)
+                  lineTo(0f, h * 0.16f)
+                  close()
+              }
+              drawPath(blood, Brush.verticalGradient(listOf(colors.primary.copy(alpha = 0.72f), colors.secondary.copy(alpha = 0.16f), Color.Transparent), endY = h * 0.38f))
+          }
+'''
+          if marker not in t:
+              raise SystemExit("Backdrop theme insertion point missing.")
+          t = t.replace(marker, blood, 1)
+          palette.write_text(t, encoding="utf-8")
+          print("Added adaptive theme-colored blood overlay, 6dp artwork blur, and fixed crimson Gothic wordmark with OFL font.")
           PY
           grep -nE 'runtime.getValue|runtime.setValue|signingInfo\\?\\.apkContentsSigners|foundation.layout.Row' app/src/main/java/com/chiyuri/player/AppUpdates.kt
 
@@ -118,7 +164,7 @@ jobs:
           test -s "$RUNNER_TEMP/chiyuri-signing/release.jks"
 
       - name: Run unit tests
-        run: gradle testDebugUnitTest -PVERSION_CODE=203
+        run: gradle testDebugUnitTest -PVERSION_CODE=204
 
       - name: Build signed release APK
         env:
@@ -130,36 +176,36 @@ jobs:
           test -n "$CHIYURI_KEYSTORE_PASSWORD"
           test -n "$CHIYURI_KEY_ALIAS"
           test -n "$CHIYURI_KEY_PASSWORD"
-          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=203
+          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=204
 
       - name: Verify APK signature
         run: |
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
-          sha256sum "$APK" | tee ChiyuriPlayer-0.2.3.sha256
+          sha256sum "$APK" | tee ChiyuriPlayer-0.2.4.sha256
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChiyuriPlayer-0.2.3
+          name: ChiyuriPlayer-0.2.4
           path: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.3.sha256
+            ChiyuriPlayer-0.2.4.sha256
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.2.3
-          name: ChiyuriPlayer 0.2.3
+          tag_name: v0.2.4
+          name: ChiyuriPlayer 0.2.4
           body: |
-            Чёрно-красный редизайн, брендированная шапка и исправление ресурсов иконки ChiyuriPlayer 0.2.3.
+            Насыщенная кроваво-красная тема, адаптивный кровавый фон, читаемые обложки, готический логотип Chiyuri без перекраски.
             Unit-тесты и проверка подписи должны завершиться успешно.
             APK подписан тем же постоянным ключом, что и предыдущая версия.
           files: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.3.sha256
+            ChiyuriPlayer-0.2.4.sha256
           make_latest: true
           fail_on_unmatched_files: true
