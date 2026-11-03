@@ -425,10 +425,10 @@ jobs:
               if not path.exists():
                   continue
               text = path.read_text(encoding="utf-8")
-              if name == "AppUpdates.kt":
-                  text = text.replace("GothicIcon(", "com.chiyuri.player.GothicIcon(")
               import re
               text = re.sub(r"(?<![A-Za-z0-9_])Icon[(]", "GothicIcon(", text)
+              if name == "AppUpdates.kt":
+                  text = text.replace("GothicIcon(", "com.chiyuri.player.GothicIcon(")
               if name == "MainActivity.kt":
                   text = text.replace("IconButton(", "GothicIconButton(")
               path.write_text(text, encoding="utf-8")
