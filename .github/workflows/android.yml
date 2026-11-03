@@ -433,7 +433,7 @@ jobs:
                       lines = text.splitlines()
                       package_index = next(i for i, line in enumerate(lines) if line.startswith("package "))
                       lines.insert(package_index + 1, "import com.chiyuri.player.GothicIcon")
-                      text = "\\n".join(lines) + "\\n"
+                      text = chr(10).join(lines) + chr(10)
               if name == "MainActivity.kt":
                   text = text.replace("IconButton(", "GothicIconButton(")
               path.write_text(text, encoding="utf-8")
