@@ -62,6 +62,27 @@ jobs:
           m = m.replace(old, "modifier = modifier.fillMaxWidth(),", 1)
           main.write_text(m, encoding="utf-8")
           print("Fixed nested vertical scrolling in More > Audio Effects.")
+          # ChiyuriPlayer visual refresh: black/red palette, branded header, and legacy launcher icon fallback.
+          main = Path("app/src/main/java/com/chiyuri/player/MainActivity.kt")
+          m = main.read_text(encoding="utf-8")
+          m = m.replace("private val Night = Color(0xFF101116)", "private val Night = Color(0xFF080000)")
+          m = m.replace("private val Panel = Color(0xFF1C1E27)", "private val Panel = Color(0xFF17090C)")
+          m = m.replace("private val Accent = Color(0xFFB7A0FF)", "private val Accent = Color(0xFFFF1744)")
+          m = m.replace("primary = Accent,\\n            secondary = Color(0xFF82D8C8)", "primary = Accent,\\n            secondary = Color(0xFFFF526F)")
+          m = m.replace('Text("CHIYURI", color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, letterSpacing = 4.sp)', 'Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {\\n                androidx.compose.foundation.Image(painter = androidx.compose.ui.res.painterResource(com.chiyuri.player.R.mipmap.ic_launcher), contentDescription = "ChiyuriPlayer", modifier = Modifier.size(42.dp), contentScale = androidx.compose.ui.layout.ContentScale.Crop)\\n                Spacer(Modifier.width(10.dp))\\n                Column {\\n                    Text("Chiyuri", color = MaterialTheme.colorScheme.onSurface, fontSize = 19.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)\\n                    Text("PLAYER", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, letterSpacing = 3.sp)\\n                }\\n            }')
+          main.write_text(m, encoding="utf-8")
+          palette = Path("app/src/main/java/com/chiyuri/player/TrackArtworkBackdrop.kt")
+          t = palette.read_text(encoding="utf-8")
+          t = t.replace("primary = Color(0xFFB7A0FF)", "primary = Color(0xFFFF1744)")
+          t = t.replace("secondary = Color(0xFF82D8C8)", "secondary = Color(0xFFFF526F)")
+          t = t.replace("background = Color(0xFF101116)", "background = Color(0xFF080000)")
+          t = t.replace("surface = Color(0xFF1C1E27)", "surface = Color(0xFF17090C)")
+          palette.write_text(t, encoding="utf-8")
+          # Adaptive icon foreground currently reuses a full-bleed square logo and gets cropped by Android masks.
+          # Remove adaptive wrappers so Android uses the verified density-specific CP launcher PNGs.
+          for icon in [Path("app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml"), Path("app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml")]:
+              if icon.exists(): icon.unlink()
+          print("Applied red/black visual theme, branded header, red artwork-palette defaults, and safe legacy launcher icon resources.")
           PY
           grep -nE 'runtime.getValue|runtime.setValue|signingInfo\\?\\.apkContentsSigners|foundation.layout.Row' app/src/main/java/com/chiyuri/player/AppUpdates.kt
 
@@ -97,7 +118,7 @@ jobs:
           test -s "$RUNNER_TEMP/chiyuri-signing/release.jks"
 
       - name: Run unit tests
-        run: gradle testDebugUnitTest -PVERSION_CODE=202
+        run: gradle testDebugUnitTest -PVERSION_CODE=203
 
       - name: Build signed release APK
         env:
@@ -109,36 +130,36 @@ jobs:
           test -n "$CHIYURI_KEYSTORE_PASSWORD"
           test -n "$CHIYURI_KEY_ALIAS"
           test -n "$CHIYURI_KEY_PASSWORD"
-          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=202
+          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=203
 
       - name: Verify APK signature
         run: |
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
-          sha256sum "$APK" | tee ChiyuriPlayer-0.2.2.sha256
+          sha256sum "$APK" | tee ChiyuriPlayer-0.2.3.sha256
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChiyuriPlayer-0.2.2
+          name: ChiyuriPlayer-0.2.3
           path: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.2.sha256
+            ChiyuriPlayer-0.2.3.sha256
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.2.2
-          name: ChiyuriPlayer 0.2.2
+          tag_name: v0.2.3
+          name: ChiyuriPlayer 0.2.3
           body: |
-            Исправление аварийного закрытия раздела «Ещё» в ChiyuriPlayer 0.2.2.
+            Чёрно-красный редизайн, брендированная шапка и исправление ресурсов иконки ChiyuriPlayer 0.2.3.
             Unit-тесты и проверка подписи должны завершиться успешно.
             APK подписан тем же постоянным ключом, что и предыдущая версия.
           files: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.2.2.sha256
+            ChiyuriPlayer-0.2.3.sha256
           make_latest: true
           fail_on_unmatched_files: true
