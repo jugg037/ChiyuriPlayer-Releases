@@ -50,6 +50,9 @@ jobs:
           s = "\n".join(lines) + "\n"
           s = s.replace("installed.signingInfo.apkContentsSigners", "installed.signingInfo?.apkContentsSigners")
           s = s.replace("androidx.compose.material3.Row(", "androidx.compose.foundation.layout.Row(")
+          s = s.replace("androidx.compose.material.icons.Icons.Default.SystemUpdate", "androidx.compose.material.icons.Icons.Default.Info")
+          s = s.replace("androidx.compose.material.icons.Icons.Default.Download", "androidx.compose.material.icons.Icons.Default.ArrowDownward")
+          s = s.replace("androidx.compose.material.icons.Icons.Default.Refresh", "androidx.compose.material.icons.Icons.Default.Refresh")
           p.write_text(s, encoding="utf-8")
           print("Applied Compose state imports, nullable SigningInfo handling, and Row namespace fix.")
           PY
