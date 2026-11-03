@@ -425,8 +425,8 @@ jobs:
               if not path.exists():
                   continue
               text = path.read_text(encoding="utf-8")
-              if name == "AppUpdates.kt" and "import com.chiyuri.player.GothicIcon" not in text:
-                  text = text.replace("package com.chiyuri.player.updates", "package com.chiyuri.player.updates\\n\\nimport com.chiyuri.player.GothicIcon", 1)
+              if name == "AppUpdates.kt":
+                  text = text.replace("GothicIcon(", "com.chiyuri.player.GothicIcon(")
               import re
               text = re.sub(r"(?<![A-Za-z0-9_])Icon[(]", "GothicIcon(", text)
               if name == "MainActivity.kt":
