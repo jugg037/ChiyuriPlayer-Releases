@@ -315,7 +315,7 @@ jobs:
           screen.write_text(ui, encoding="utf-8")
 
           gradle = Path("app/build.gradle.kts")
-          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.3.0"', 'versionName = "0.2.9"')
+          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.2.9"', 'versionName = "0.3.0"')
           gradle.write_text(g, encoding="utf-8")
           print("Removed logo shadow blur; expanded lyrics lookup to LRCLIB, lyrics.ovh and Deezer suggestions.")
           PY
@@ -326,7 +326,7 @@ jobs:
           from pathlib import Path
           p = Path("app/src/main/java/com/chiyuri/player/LyricsRepository.kt")
           s = p.read_text(encoding="utf-8")
-          marker = "                      // Secondary provider: lyrics.ovh direct title/artist lookup (plain lyrics)."
+          marker = "// Final fallback: Deezer-backed suggestions from lyrics.ovh; rank before fetching."
           if marker not in s:
               raise SystemExit("Expected lyrics.ovh fallback marker not found; refusing to patch.")
           block = """                      // Independent provider: SyncLRC (synced, plain and karaoke-capable catalog).
@@ -355,7 +355,9 @@ jobs:
                       syncCandidates.maxByOrNull { it.second }?.first?.let { return@withContext it.result }
 
           """
-          s = s.replace(marker, block + marker, 1)
+          idx = s.index(marker)
+          line_start = s.rfind("\n", 0, idx) + 1
+          s = s[:line_start] + block + s[line_start:]
           p.write_text(s, encoding="utf-8")
           print("Added SyncLRC with metadata scoring and synced/plain lyric parsing.")
           PY
