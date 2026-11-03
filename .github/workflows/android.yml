@@ -99,31 +99,33 @@ jobs:
           palette = Path("app/src/main/java/com/chiyuri/player/TrackArtworkBackdrop.kt")
           t = palette.read_text(encoding="utf-8")
           t = t.replace('modifier = Modifier.fillMaxSize().blur(38.dp).alpha(0.42f)', 'modifier = Modifier.fillMaxSize().blur(6.dp).alpha(0.38f)')
-          marker = '        val colors = androidx.compose.material3.MaterialTheme.colorScheme\n'
-          blood = '''        val colors = androidx.compose.material3.MaterialTheme.colorScheme
-          androidx.compose.foundation.Canvas(Modifier.fillMaxSize().alpha(0.30f)) {
-              val w = size.width
-              val h = size.height
-              val blood = androidx.compose.ui.graphics.Path().apply {
-                  moveTo(0f, 0f)
-                  lineTo(w, 0f)
-                  lineTo(w, h * 0.13f)
-                  cubicTo(w * 0.91f, h * 0.17f, w * 0.94f, h * 0.23f, w * 0.86f, h * 0.25f)
-                  cubicTo(w * 0.78f, h * 0.27f, w * 0.83f, h * 0.34f, w * 0.75f, h * 0.36f)
-                  lineTo(w * 0.72f, h * 0.18f)
-                  cubicTo(w * 0.64f, h * 0.23f, w * 0.68f, h * 0.29f, w * 0.60f, h * 0.30f)
-                  lineTo(w * 0.57f, h * 0.12f)
-                  cubicTo(w * 0.48f, h * 0.17f, w * 0.52f, h * 0.24f, w * 0.44f, h * 0.25f)
-                  lineTo(w * 0.40f, h * 0.10f)
-                  cubicTo(w * 0.31f, h * 0.15f, w * 0.35f, h * 0.22f, w * 0.27f, h * 0.24f)
-                  lineTo(w * 0.24f, h * 0.12f)
-                  cubicTo(w * 0.15f, h * 0.18f, w * 0.18f, h * 0.23f, w * 0.09f, h * 0.25f)
-                  lineTo(0f, h * 0.16f)
-                  close()
-              }
-              drawPath(blood, Brush.verticalGradient(listOf(colors.primary.copy(alpha = 0.72f), colors.secondary.copy(alpha = 0.16f), Color.Transparent), endY = h * 0.38f))
-          }
-'''
+          marker = "        val colors = androidx.compose.material3.MaterialTheme.colorScheme" + chr(10)
+          blood_lines = [
+              "        val colors = androidx.compose.material3.MaterialTheme.colorScheme",
+              "        androidx.compose.foundation.Canvas(Modifier.fillMaxSize().alpha(0.30f)) {",
+              "            val w = size.width",
+              "            val h = size.height",
+              "            val blood = androidx.compose.ui.graphics.Path().apply {",
+              "                moveTo(0f, 0f)",
+              "                lineTo(w, 0f)",
+              "                lineTo(w, h * 0.13f)",
+              "                cubicTo(w * 0.91f, h * 0.17f, w * 0.94f, h * 0.23f, w * 0.86f, h * 0.25f)",
+              "                cubicTo(w * 0.78f, h * 0.27f, w * 0.83f, h * 0.34f, w * 0.75f, h * 0.36f)",
+              "                lineTo(w * 0.72f, h * 0.18f)",
+              "                cubicTo(w * 0.64f, h * 0.23f, w * 0.68f, h * 0.29f, w * 0.60f, h * 0.30f)",
+              "                lineTo(w * 0.57f, h * 0.12f)",
+              "                cubicTo(w * 0.48f, h * 0.17f, w * 0.52f, h * 0.24f, w * 0.44f, h * 0.25f)",
+              "                lineTo(w * 0.40f, h * 0.10f)",
+              "                cubicTo(w * 0.31f, h * 0.15f, w * 0.35f, h * 0.22f, w * 0.27f, h * 0.24f)",
+              "                lineTo(w * 0.24f, h * 0.12f)",
+              "                cubicTo(w * 0.15f, h * 0.18f, w * 0.18f, h * 0.23f, w * 0.09f, h * 0.25f)",
+              "                lineTo(0f, h * 0.16f)",
+              "                close()",
+              "            }",
+              "            drawPath(blood, Brush.verticalGradient(listOf(colors.primary.copy(alpha = 0.72f), colors.secondary.copy(alpha = 0.16f), Color.Transparent), endY = h * 0.38f))",
+              "        }",
+          ]
+          blood = chr(10).join(blood_lines) + chr(10)
           if marker not in t:
               raise SystemExit("Backdrop theme insertion point missing.")
           t = t.replace(marker, blood, 1)
