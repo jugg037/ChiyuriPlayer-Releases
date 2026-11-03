@@ -707,7 +707,7 @@ jobs:
           test -n "$CHIYURI_KEYSTORE_PASSWORD"
           test -n "$CHIYURI_KEY_ALIAS"
           test -n "$CHIYURI_KEY_PASSWORD"
-          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=300
+          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=301
 
       - name: Verify APK signature
         run: |
@@ -719,10 +719,10 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChiyuriPlayer-0.3.0
+          name: ChiyuriPlayer-0.3.1
           path: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.3.0.sha256
+            ChiyuriPlayer-0.3.1.sha256
           if-no-files-found: error
           retention-days: 30
 
