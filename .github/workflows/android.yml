@@ -364,6 +364,75 @@ jobs:
           s = s[:line_start] + block + s[line_start:]
           p.write_text(s, encoding="utf-8")
           print("Added SyncLRC with metadata scoring and synced/plain lyric parsing.")
+
+          # Add LiriQo's normalized multi-provider catalog (Apple Music, Musixmatch,
+          # Unison, NetEase, KuGou, QQ Music, LRCLIB and YouTube Music).
+          p = Path("app/src/main/java/com/chiyuri/player/LyricsRepository.kt")
+          s = p.read_text(encoding="utf-8")
+          sync_marker = "// Independent provider: SyncLRC (synced, plain and karaoke-capable catalog)."
+          if sync_marker not in s:
+              raise SystemExit("SyncLRC insertion point missing; refusing LiriQo patch.")
+          liriqo = """                      // Multi-provider fallback: LiriQo normalizes eight lyric catalogs.
+                      val liriqoQuery = buildString {
+                          append("https://api.liriqo-alfarrizi.my.id/v1/lyrics?title=").append(encode(cleanTitle))
+                          if (cleanArtist.isNotBlank()) append("&artist=").append(encode(cleanArtist))
+                          if (durationSeconds != null) append("&duration=").append(durationSeconds)
+                      }
+                      val liriqoRaw = requestAbsolute(liriqoQuery)
+                      val liriqoRoot = runCatching { JSONObject(liriqoRaw ?: "") }.getOrNull()
+                      val liriqoMetadata = liriqoRoot?.optJSONObject("metadata")
+                      val liriqoPrimary = liriqoRoot?.optJSONObject("primary")
+                          ?: liriqoRoot?.optJSONArray("tracks")?.optJSONObject(0)
+                      if (liriqoPrimary != null && liriqoRoot?.optString("error").isNullOrBlank()) {
+                          val liriqoPlain = liriqoPrimary.optString("plain")
+                              .takeIf { it.isNotBlank() && it != "null" }
+                          val timedArray = liriqoPrimary.optJSONArray("timed")
+                          val liriqoLrc = buildString {
+                              if (timedArray != null) {
+                                  for (index in 0 until timedArray.length()) {
+                                      val line = timedArray.optJSONObject(index) ?: continue
+                                      val startMs = line.optLong("start", -1L)
+                                      val lyric = line.optString("text").trim()
+                                      if (startMs < 0L || lyric.isBlank()) continue
+                                      val centiseconds = startMs / 10L
+                                      val minutes = centiseconds / 6000L
+                                      val seconds = (centiseconds % 6000L) / 100L
+                                      val fraction = centiseconds % 100L
+                                      append("[")
+                                      append(minutes.toString().padStart(2, '0')).append(":")
+                                      append(seconds.toString().padStart(2, '0')).append(".")
+                                      append(fraction.toString().padStart(2, '0')).append("]")
+                                      append(lyric).append("\\n")
+                                  }
+                              }
+                          }.takeIf { it.isNotBlank() }
+                          val liriqoTitle = liriqoPrimary.optString("title")
+                              .ifBlank { liriqoPrimary.optString("track").ifBlank { liriqoMetadata?.optString("title").orEmpty().ifBlank { cleanTitle } } }
+                          val liriqoArtist = liriqoPrimary.optString("artist")
+                              .ifBlank { liriqoMetadata?.optString("artist").orEmpty().ifBlank { cleanArtist } }
+                          val liriqoDuration = liriqoPrimary.optLong("duration").takeIf { it > 0L }
+                              ?: liriqoMetadata?.optLong("duration")?.takeIf { it > 0L }
+                              ?: durationSeconds ?: 0L
+                          val liriqoResult = LyricsResult(
+                              liriqoPlain ?: liriqoLrc?.lineSequence()?.mapNotNull { row ->
+                                  row.substringAfter("]").takeIf { "]" in row && it.isNotBlank() }
+                              }?.joinToString("\\n"),
+                              liriqoLrc
+                          )
+                          val liriqoCandidate = LyricsCandidate(
+                              liriqoResult, liriqoTitle, liriqoArtist, liriqoDuration
+                          )
+                          if ((liriqoResult.plainLyrics != null || liriqoResult.syncedLyrics != null) &&
+                              lyricsCandidateScore(liriqoCandidate, cleanTitle, cleanArtist, durationSeconds) >= 0.50
+                          ) return@withContext liriqoResult
+                      }
+
+          """
+          idx = s.index(sync_marker)
+          line_start = s.rfind("\\n", 0, idx) + 1
+          s = s[:line_start] + liriqo + s[line_start:]
+          p.write_text(s, encoding="utf-8")
+          print("Added LiriQo multi-provider fallback with metadata matching and normalized millisecond-to-LRC conversion.")
           PY
 
       - name: Apply Gothic controls, mini-player transparency and live installed version
