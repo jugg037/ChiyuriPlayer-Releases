@@ -428,12 +428,7 @@ jobs:
               import re
               text = re.sub(r"(?<![A-Za-z0-9_])Icon[(]", "GothicIcon(", text)
               if name == "AppUpdates.kt":
-                  text = text.replace("com.chiyuri.player.GothicIcon(", "GothicIcon(")
-                  if "import com.chiyuri.player.GothicIcon" not in text:
-                      lines = text.splitlines()
-                      package_index = next(i for i, line in enumerate(lines) if line.startswith("package "))
-                      lines.insert(package_index + 1, "import com.chiyuri.player.GothicIcon")
-                      text = chr(10).join(lines) + chr(10)
+                  text = text.replace("GothicIcon(", "Icon(")
               if name == "MainActivity.kt":
                   text = text.replace("IconButton(", "GothicIconButton(")
               path.write_text(text, encoding="utf-8")
