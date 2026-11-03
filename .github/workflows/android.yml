@@ -425,8 +425,9 @@ jobs:
               if not path.exists():
                   continue
               text = path.read_text(encoding="utf-8")
-              text = text.replace("androidx.compose.material3.Icon(", "GothicIcon(")
+              text = text.replace("androidx.compose.material3.Icon(", "__GOTHIC_ICON__(")
               text = text.replace("Icon(", "GothicIcon(")
+              text = text.replace("__GOTHIC_ICON__(", "GothicIcon(")
               if name == "MainActivity.kt":
                   text = text.replace("IconButton(", "GothicIconButton(")
               path.write_text(text, encoding="utf-8")
