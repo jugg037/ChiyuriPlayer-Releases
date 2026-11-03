@@ -543,9 +543,11 @@ jobs:
                     LyricsMiniPanel(player = player, title = title, artist = artist)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         TrackArtwork('''
-          if anchor not in m:
-              raise SystemExit("Expanded mini-player artwork anchor not found; refusing unsafe insertion.")
-          m = m.replace(anchor, replacement, 1)
+          target = '                    verticalArrangement = Arrangement.spacedBy(8.dp)\n                ) {\n                    Row(verticalAlignment = Alignment.CenterVertically) {'
+          insert = '                    verticalArrangement = Arrangement.spacedBy(8.dp)\n                ) {\n                    LyricsMiniPanel(player = player, title = title, artist = artist)\n                    Row(verticalAlignment = Alignment.CenterVertically) {'
+          if target not in m:
+              raise SystemExit("Expanded mini-player Column insertion point not found.")
+          m = m.replace(target, insert, 1)
           main.write_text(m, encoding="utf-8")
 
           panel = base / "LyricsMiniPanel.kt"
