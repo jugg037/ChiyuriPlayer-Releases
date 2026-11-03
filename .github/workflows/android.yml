@@ -314,8 +314,8 @@ jobs:
 
           screen = Path("app/src/main/java/com/chiyuri/player/LyricsScreen.kt")
           ui = screen.read_text(encoding="utf-8")
-          ui = ui.replace("Во встроенных тегах и LRCLIB текст не найден.", "Во встроенных тегах, LRCLIB и lyrics.ovh текст не найден.")
-          ui = ui.replace("Поиск использует точное совпадение, альтернативные варианты названия и исполнителя, а затем расширенный запрос.", "Поиск проверяет встроенные теги, LRCLIB, lyrics.ovh и варианты названия/исполнителя через каталог Deezer.")
+          ui = ui.replace("Во встроенных тегах и LRCLIB текст не найден.", "Во встроенных тегах, LRCLIB, lyrics.ovh, SyncLRC и каталоге LiriQo текст не найден.")
+          ui = ui.replace("Поиск использует точное совпадение, альтернативные варианты названия и исполнителя, а затем расширенный запрос.", "Поиск проверяет встроенные теги, LRCLIB, lyrics.ovh, SyncLRC и агрегатор LiriQo с несколькими музыкальными каталогами. Аудиофайл никуда не отправляется.")
           screen.write_text(ui, encoding="utf-8")
 
           gradle = Path("app/build.gradle.kts")
@@ -663,14 +663,42 @@ jobs:
               val uri = player.currentMediaItem?.localConfiguration?.uri
               val context = androidx.compose.ui.platform.LocalContext.current
               var lyrics by remember(uri) { mutableStateOf<LyricsResult?>(null) }
+              var loading by remember(uri) { mutableStateOf(false) }
+              var resolved by remember(uri) { mutableStateOf(false) }
               var position by remember { mutableLongStateOf(0L) }
+              val syncOffsetMs = remember(uri) { LyricsSyncOffsetStore.load(context, uri).toLong() }
               val listState = rememberLazyListState()
               LaunchedEffect(uri, title, artist) {
                   lyrics = null
-                  if (uri != null) {
-                      lyrics = withContext(Dispatchers.IO) {
-                          LyricsRepository.search(artist, title, player.duration.coerceAtLeast(0L))
+                  resolved = false
+                  loading = uri != null
+                  try {
+                      if (uri != null) {
+                          lyrics = withContext(Dispatchers.IO) {
+                              val saved = TrackMetadataRepository.loadOverride(context, uri)
+                              val savedResult = saved?.let {
+                                  LyricsResult(
+                                      it.plainLyrics.takeIf(String::isNotBlank),
+                                      it.syncedLyrics.takeIf(String::isNotBlank)
+                                  )
+                              }?.takeIf { it.plainLyrics != null || it.syncedLyrics != null }
+                              if (savedResult != null) {
+                                  savedResult
+                              } else {
+                                  val embedded = TrackMetadataRepository.readEmbeddedLyricsResult(context, uri)
+                                  val embeddedResult = embedded?.let {
+                                      LyricsResult(
+                                          it.plainLyrics?.let(LyricsTextFormatter::format)?.takeIf(String::isNotBlank),
+                                          it.syncedLyrics?.takeIf(String::isNotBlank)
+                                      )
+                                  }?.takeIf { it.plainLyrics != null || it.syncedLyrics != null }
+                                  embeddedResult ?: LyricsRepository.search(artist, title, player.duration.coerceAtLeast(0L))
+                              }
+                          }
                       }
+                  } finally {
+                      loading = false
+                      resolved = true
                   }
               }
               LaunchedEffect(player) {
@@ -694,7 +722,7 @@ jobs:
                   if (timed.isEmpty()) lyrics?.plainLyrics.orEmpty().lines().filter { it.isNotBlank() }
                   else emptyList()
               }
-              val active = timed.indexOfLast { it.time <= position }
+              val active = timed.indexOfLast { it.time + syncOffsetMs <= position }
               LaunchedEffect(active, timed.size) {
                   if (active >= 0) listState.animateScrollToItem(active)
               }
@@ -708,7 +736,9 @@ jobs:
                   Text("ТЕКСТ ПЕСНИ", color = MaterialTheme.colorScheme.primary,
                       fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
                   when {
-                      lyrics == null -> Text("Загружаю текст…", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                      lyrics == null && loading -> Text("Ищу текст и загружаю сохранённую версию…", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                      lyrics == null && resolved -> Text("Текст для этой композиции не найден", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                      lyrics == null -> Text("Подготавливаю текст…", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                       timed.isNotEmpty() -> LazyColumn(state = listState, modifier = Modifier.fillMaxWidth().heightIn(max = 190.dp)) {
                           itemsIndexed(timed) { index, line ->
                               Text(line.text, modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
