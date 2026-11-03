@@ -429,7 +429,7 @@ jobs:
 
           """
           idx = s.index(sync_marker)
-          line_start = s.rfind("\\n", 0, idx) + 1
+          line_start = s.rfind("\n", 0, idx) + 1
           s = s[:line_start] + liriqo + s[line_start:]
           p.write_text(s, encoding="utf-8")
           print("Added LiriQo multi-provider fallback with metadata matching and normalized millisecond-to-LRC conversion.")
