@@ -388,6 +388,7 @@ internal fun GothicIcon(
               file = root / "java/com/chiyuri/player" / name
               content = file.read_text(encoding="utf-8")
               content = content.replace("Icon(", "GothicIcon(")
+              content = content.replace("androidx.compose.material3.GothicIcon(", "GothicIcon(")
               file.write_text(content, encoding="utf-8")
 
           print("Expanded mini-player transparency to 50%, tied installed version to BuildConfig, and applied Gothic icon frames/cut-corner controls.")
