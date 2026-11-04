@@ -18,8 +18,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.4"
-      APP_VERSION_CODE: "314"
+      APP_VERSION_NAME: "0.4.5"
+      APP_VERSION_CODE: "315"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -1590,6 +1590,51 @@ jobs:
           print("The editor Save action writes metadata to the source file and refreshes the active queue item.")
           PY
 
+      - name: Make metadata writes compatible with Android document providers
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("app/src/main/java/com/chiyuri/player/TrackMetadataRepository.kt")
+          source = path.read_text(encoding="utf-8")
+          marker = "    private fun contentMatches(context: Context, uri: Uri, expected: java.io.File): Boolean {"
+          helper = """    /**
+     * SAF providers are inconsistent: some reject the read/write/truncate mode
+     * while supporting the standard truncating write mode. Always verify the
+     * resulting bytes after writing and retain the existing rollback path.
+     */
+    private fun openTruncatingOutputStream(context: Context, uri: Uri): java.io.OutputStream {
+        var rwtFailure: Exception? = null
+        try {
+            context.contentResolver.openOutputStream(uri, "rwt")?.let { return it }
+        } catch (error: Exception) {
+            rwtFailure = error
+        }
+        return try {
+            context.contentResolver.openOutputStream(uri, "w")
+                ?: throw java.io.IOException("Поставщик файлов не разрешил запись.")
+        } catch (error: Exception) {
+            rwtFailure?.let(error::addSuppressed)
+            throw error
+        }
+    }
+
+"""
+          if "private fun openTruncatingOutputStream(" not in source:
+              count = source.count('context.contentResolver.openOutputStream(uri, "rwt")')
+              if count < 2:
+                  raise SystemExit(f"Expected at least two rwt write sites, found {count}; refusing unsafe patch.")
+              source = source.replace(
+                  'context.contentResolver.openOutputStream(uri, "rwt")',
+                  'openTruncatingOutputStream(context, uri)'
+              )
+              if marker not in source:
+                  raise SystemExit("Metadata content verification marker not found.")
+              source = source.replace(marker, helper + marker, 1)
+              path.write_text(source, encoding="utf-8")
+          print("Metadata writes now fall back from rwt to w and retain byte-for-byte verification and rollback.")
+          PY
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -1668,7 +1713,7 @@ jobs:
           body: |
             Загрузка обновлений продолжается при переключении вкладок, а отмена останавливает сетевую загрузку и удаляет неполный APK.
             В Центре обновлений и системном уведомлении отображается ход загрузки; отменить её можно прямо из шторки уведомлений.
-            Обновлён внешний вид системных кнопок управления воспроизведением в стиле ChiyuriPlayer.
+            Обновлён внешний вид системных кнопок управления воспроизведением в стиле ChiyuriPlayer.\nЗапись метаданных совместима с SAF-провайдерами, которые отклоняют режим rwt; после записи проверяются байты и при ошибке выполняется восстановление.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
