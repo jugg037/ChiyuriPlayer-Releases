@@ -966,18 +966,12 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path("app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt")
           source = path.read_text(encoding="utf-8")
-          old = '''        confirmButton = {
-                      TextButton(
-                          enabled = title.isNotBlank(),
-                          onClick = {
-                              onApply(TrackMetadata(title.trim(), artist.trim(), album.trim(), year.trim(), artworkUrl.trim(), plainLyrics, syncedLyrics))
-                          }
-                      ) { Text("Сохранить") }
-                  },'''
-          new = '''        confirmButton = {
+          pattern = r'        confirmButton = \{\n            TextButton\(.*?\n            \) \{ Text\("Сохранить"\) \}\n        \},'
+          replacement = '''        confirmButton = {
                       TextButton(
                           enabled = uri != null && !loading && !writingToFile && title.isNotBlank(),
                           onClick = {
@@ -1004,19 +998,15 @@ jobs:
                       }
                   },'''
           if "Не удалось сохранить файл: $error" not in source:
-              if old not in source:
-                  raise SystemExit("Metadata editor confirm button block did not match expected source; aborting.")
-              source = source.replace(old, new, 1)
+              source, count = re.subn(pattern, replacement, source, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit("Could not safely replace the metadata editor Save action.")
 
-          separate_start = source.find('                OutlinedButton(\n                    enabled = uri != null && !loading && !writingToFile && title.isNotBlank(),')
-          if separate_start >= 0:
-              search_start = source.find('                Button(\n                    enabled = !loading && !writingToFile && title.isNotBlank(),', separate_start)
-              if search_start < 0:
-                  raise SystemExit("Could not find metadata autofill button after file-write button.")
-              source = source[:separate_start] + source[search_start:]
+          remove_pattern = r'                OutlinedButton\(\n                    enabled = uri != null.*?\n                \}\n(?=                Button\(\n                    enabled = !loading)'
+          source, _ = re.subn(remove_pattern, "", source, count=1, flags=re.S)
 
           path.write_text(source, encoding="utf-8")
-          print("The editor's Save action now writes tags to the source file and refreshes the active queue item.")
+          print("The editor Save action writes metadata to the source file and refreshes the active queue item.")
           PY
 
       - name: Set up JDK 17
