@@ -18,8 +18,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.2"
-      APP_VERSION_CODE: "312"
+      APP_VERSION_NAME: "0.4.3"
+      APP_VERSION_CODE: "313"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -962,6 +962,63 @@ jobs:
           print("Mini-player edit shortcut and multi-source metadata/lyrics autofill installed.")
           PY
 
+      - name: Save metadata directly to the playing audio file
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt")
+          source = path.read_text(encoding="utf-8")
+          old = '''        confirmButton = {
+                      TextButton(
+                          enabled = title.isNotBlank(),
+                          onClick = {
+                              onApply(TrackMetadata(title.trim(), artist.trim(), album.trim(), year.trim(), artworkUrl.trim(), plainLyrics, syncedLyrics))
+                          }
+                      ) { Text("Сохранить") }
+                  },'''
+          new = '''        confirmButton = {
+                      TextButton(
+                          enabled = uri != null && !loading && !writingToFile && title.isNotBlank(),
+                          onClick = {
+                              val edited = TrackMetadata(
+                                  title.trim(), artist.trim(), album.trim(), year.trim(),
+                                  artworkUrl.trim(), plainLyrics, syncedLyrics
+                              )
+                              scope.launch {
+                                  writingToFile = true
+                                  message = "Сохраняем изменения в текущий аудиофайл…"
+                                  val error = TrackMetadataRepository.writeMetadataToFile(context, uri!!, edited)
+                                  writingToFile = false
+                                  if (error == null) {
+                                      TrackMetadataRepository.saveOverride(context, uri, edited)
+                                      onApply(edited)
+                                  } else {
+                                      message = "Не удалось сохранить файл: $error"
+                                  }
+                              }
+                          }
+                      ) {
+                          if (writingToFile) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                          else Text("Сохранить изменения")
+                      }
+                  },'''
+          if "Не удалось сохранить файл: $error" not in source:
+              if old not in source:
+                  raise SystemExit("Metadata editor confirm button block did not match expected source; aborting.")
+              source = source.replace(old, new, 1)
+
+          separate_start = source.find('                OutlinedButton(\n                    enabled = uri != null && !loading && !writingToFile && title.isNotBlank(),')
+          if separate_start >= 0:
+              search_start = source.find('                Button(\n                    enabled = !loading && !writingToFile && title.isNotBlank(),', separate_start)
+              if search_start < 0:
+                  raise SystemExit("Could not find metadata autofill button after file-write button.")
+              source = source[:separate_start] + source[search_start:]
+
+          path.write_text(source, encoding="utf-8")
+          print("The editor's Save action now writes tags to the source file and refreshes the active queue item.")
+          PY
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -1038,9 +1095,7 @@ jobs:
           tag_name: v${{ env.APP_VERSION_NAME }}
           name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
           body: |
-            Добавлены кнопка редактирования метаданных из мини-плеера и автозаполнение пустых полей из iTunes, Deezer и LRCLIB. Сохранение в библиотеке приложения и запись поддерживаемых тегов в файл доступны отдельно.
-            Unit-тесты и проверка подписи должны завершиться успешно.
-            APK подписан тем же постоянным ключом, что и предыдущая версия.
+            Кнопка редактирования информации о треке доступна прямо в мини-плеере. Автозаполнение проверяет iTunes, Deezer и LRCLIB, а сохранение записывает изменения в текущий аудиофайл.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
