@@ -906,6 +906,6 @@ jobs:
             APK подписан тем же постоянным ключом, что и предыдущая версия.
           files: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-$APP_VERSION_NAME.sha256
+            ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
           make_latest: true
           fail_on_unmatched_files: true
