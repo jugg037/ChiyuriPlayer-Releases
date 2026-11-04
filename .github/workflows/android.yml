@@ -19,8 +19,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.7"
-      APP_VERSION_CODE: "317"
+      APP_VERSION_NAME: "0.4.8"
+      APP_VERSION_CODE: "318"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -1843,6 +1843,104 @@ jobs:
           assert "catch (cancelled: kotlinx.coroutines.CancellationException)" in source
           print("Metadata editor hardened: one save action, exception-safe UI state, verified backup, two rollback attempts and persistent recovery copy.")
           PY
+
+      - name: Make metadata save action visible and failure-proof
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt")
+          s = p.read_text(encoding="utf-8")
+
+          old = "        onDismissRequest = onDismiss,"
+          new = "        onDismissRequest = { if (!writingToFile) onDismiss() },"
+          if s.count(old) != 1: raise SystemExit("Dialog dismissal callback did not match exactly once.")
+          s = s.replace(old, new, 1)
+
+          # The previous code updated message state but never rendered it.
+          old = '''                }
+            }
+        },
+        confirmButton = {'''
+          new = '''                }
+                message?.let { status ->
+                    Text(
+                        text = status,
+                        color = if (status.startsWith("Не удалось") || status.startsWith("Ошибка")) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {'''
+          if old not in s: raise SystemExit("Could not locate dialog content end for status message.")
+          s = s.replace(old, new, 1)
+
+          old = '''                    scope.launch {
+                writingToFile = true
+                message = "Сохраняем изменения в текущий аудиофайл…"
+                try {'''
+          new = '''                    if (writingToFile) return@TextButton
+                    writingToFile = true
+                    message = "Подготовка записи метаданных…"
+                    scope.launch {
+                message = "Сохраняем изменения в текущий аудиофайл…"
+                try {'''
+          if old not in s: raise SystemExit("Save action callback did not match expected code.")
+          s = s.replace(old, new, 1)
+
+          old = '''                    } else {
+                        message = "Не удалось сохранить файл: " + error
+                    }
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    message = "Сохранение отменено. Проверьте состояние исходного файла перед повторной попыткой."
+                    throw cancelled
+                } catch (error: Exception) {
+                    message = "Не удалось сохранить файл: " + (error.message ?: "неизвестная ошибка")
+                } finally {'''
+          new = '''                    } else {
+                        message = "Не удалось сохранить файл: " + error
+                        android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                    }
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    message = "Сохранение отменено. Проверьте состояние исходного файла перед повторной попыткой."
+                    android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                    throw cancelled
+                } catch (error: Exception) {
+                    message = "Не удалось сохранить файл: " + (error.message ?: "неизвестная ошибка")
+                    android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                } finally {'''
+          if old not in s: raise SystemExit("Save result/error handling did not match expected code.")
+          s = s.replace(old, new, 1)
+
+          old = '''        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } }'''
+          new = '''        dismissButton = {
+            TextButton(enabled = !writingToFile, onClick = onDismiss) { Text("Отмена") }
+        }'''
+          if old not in s: raise SystemExit("Dismiss button did not match expected code.")
+          s = s.replace(old, new, 1)
+
+          # Structural regression checks: status is rendered, action is wired once, busy state is visible.
+          assert s.count("TrackMetadataRepository.writeMetadataToFile(") == 1
+          assert "message?.let { status ->" in s
+          assert "onDismissRequest = { if (!writingToFile) onDismiss() }" in s
+          assert "if (writingToFile) return@TextButton" in s
+          assert 'Text("Сохранить изменения")' in s
+          assert "Toast.makeText(context, message" in s
+          p.write_text(s, encoding="utf-8")
+          print("Editor UI verified: save click guarded, busy state immediate, status rendered, errors toasted, dialog cannot dismiss during write.")
+          PY
+
+      - name: Verify metadata save feedback and click wiring
+        run: |
+          set -eu
+          EDITOR=app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt
+          grep -F 'onDismissRequest = { if (!writingToFile) onDismiss() }' "$EDITOR"
+          grep -F 'message?.let { status ->' "$EDITOR"
+          grep -F 'if (writingToFile) return@TextButton' "$EDITOR"
+          grep -F 'Toast.makeText(context, message' "$EDITOR"
+          test "$(grep -c 'TrackMetadataRepository.writeMetadataToFile(' "$EDITOR")" -eq 1
+          echo "Save click and all outcomes are visible to the user."
 
       - name: Verify metadata editor safety wiring
         run: |
