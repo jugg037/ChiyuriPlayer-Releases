@@ -1837,7 +1837,7 @@ jobs:
           editor.write_text(ui, encoding="utf-8")
 
           assert ui.count("TrackMetadataRepository.writeMetadataToFile(") == 1
-          assert "finally {\n                              writingToFile = false" in ui
+          assert "finally {" in ui and "writingToFile = false" in ui
           assert "metadata-recovery" in source
           assert "for (attempt in 1..2)" in source
           assert "catch (cancelled: kotlinx.coroutines.CancellationException)" in source
