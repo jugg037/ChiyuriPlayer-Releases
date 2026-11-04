@@ -319,7 +319,7 @@ jobs:
           screen.write_text(ui, encoding="utf-8")
 
           gradle = Path("app/build.gradle.kts")
-          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.2.9"', 'versionName = "0.3.8"')
+          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.2.9"', 'versionName = "0.3.9"')
           gradle.write_text(g, encoding="utf-8")
           print("Removed logo shadow blur; expanded lyrics lookup to LRCLIB, lyrics.ovh and Deezer suggestions.")
           PY
@@ -502,6 +502,16 @@ jobs:
           if not re.search(r'const val CURRENT_VERSION_CODE\s*=\s*BuildConfig\.VERSION_CODE', u):
               raise SystemExit("CURRENT_VERSION_CODE is not bound to BuildConfig.VERSION_CODE.")
           updates.write_text(u, encoding="utf-8")
+
+          print("=== VERSION DIAGNOSTICS: AppUpdates.kt ===")
+          for number, line in enumerate(u.splitlines(), 1):
+              if any(term in line.lower() for term in ("version", "0.2.9", "latest", "актуаль")):
+                  print(f"{number}: {line}")
+          gradle_text = gradle.read_text(encoding="utf-8")
+          print("=== VERSION DIAGNOSTICS: app/build.gradle.kts ===")
+          for number, line in enumerate(gradle_text.splitlines(), 1):
+              if "versionName" in line or "versionCode" in line:
+                  print(f"{number}: {line}")
 
           print("Expanded mini-player transparency to 90%, tied installed version to BuildConfig, and applied Gothic icon frames/cut-corner controls.")
           PY
@@ -777,7 +787,7 @@ jobs:
           }
           """, encoding="utf-8")
           gradle = Path("app/build.gradle.kts")
-          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.3.0"', 'versionName = "0.3.8"')
+          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.3.0"', 'versionName = "0.3.9"')
           gradle.write_text(g, encoding="utf-8")
           print("Connected lyrics panel to expanded mini-player; added timed/plain rendering.")
           PY
@@ -832,7 +842,7 @@ jobs:
           test -s "$RUNNER_TEMP/chiyuri-signing/release.jks"
 
       - name: Run unit tests
-        run: gradle testDebugUnitTest -PVERSION_CODE=308
+        run: gradle testDebugUnitTest -PVERSION_CODE=309
 
       - name: Build signed release APK
         env:
@@ -844,36 +854,36 @@ jobs:
           test -n "$CHIYURI_KEYSTORE_PASSWORD"
           test -n "$CHIYURI_KEY_ALIAS"
           test -n "$CHIYURI_KEY_PASSWORD"
-          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=308
+          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=309
 
       - name: Verify APK signature
         run: |
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
-          sha256sum "$APK" | tee ChiyuriPlayer-0.3.8.sha256
+          sha256sum "$APK" | tee ChiyuriPlayer-0.3.9.sha256
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChiyuriPlayer-0.3.8
+          name: ChiyuriPlayer-0.3.9
           path: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.3.8.sha256
+            ChiyuriPlayer-0.3.9.sha256
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.3.8
-          name: ChiyuriPlayer 0.3.8
+          tag_name: v0.3.9
+          name: ChiyuriPlayer 0.3.9
           body: |
             Исправлено отображение текста песни в раскрытом мини-плеере: LRC-синхронизация, подсветка текущей строки и обычный прокручиваемый текст. Остальные изменения интерфейса сохранены.
             Unit-тесты и проверка подписи должны завершиться успешно.
             APK подписан тем же постоянным ключом, что и предыдущая версия.
           files: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.3.8.sha256
+            ChiyuriPlayer-0.3.9.sha256
           make_latest: true
           fail_on_unmatched_files: true
