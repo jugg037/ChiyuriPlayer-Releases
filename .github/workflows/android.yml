@@ -88,8 +88,9 @@ jobs:
           ): File {
               val apk = File(context.cacheDir, fileName)
               apk.delete()
-              downloadFileCancellable(info, apk, onProgress)
-              return withContext(Dispatchers.IO) {
+              try {
+                  downloadFileCancellable(info, apk, onProgress)
+                  return withContext(Dispatchers.IO) {
                   currentCoroutineContext().ensureActive()
                   val checksumConnection = URL(info.checksumUrl).openConnection() as HttpURLConnection
                   val expected = try {
@@ -119,6 +120,10 @@ jobs:
                   currentCoroutineContext().ensureActive()
                   verifySigner(context, apk)
                   apk
+                  }
+              } catch (cancelled: CancellationException) {
+                  apk.delete()
+                  throw cancelled
               }
           }
 
@@ -1661,6 +1666,7 @@ jobs:
           grep -F 'outputRef.getAndSet(null)?.close()' "$UPDATES"
           grep -F 'connectionRef.getAndSet(null)?.disconnect()' "$UPDATES"
           grep -F 'apk.delete()' "$UPDATES"
+          grep -F 'catch (cancelled: CancellationException)' "$UPDATES"
           grep -F 'CancelUpdateDownloadReceiver' "$MANIFEST"
           grep -F 'cancelUniqueWork(UpdateDownloadWorker.WORK_NAME)' "$UPDATES"
           echo "Cancellation closes active streams, disconnects the HTTP request and removes the partial APK."
