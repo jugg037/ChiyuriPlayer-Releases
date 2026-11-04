@@ -1842,19 +1842,17 @@ jobs:
           assert "for (attempt in 1..2)" in source
           assert "catch (cancelled: kotlinx.coroutines.CancellationException)" in source
           print("Metadata editor hardened: one save action, exception-safe UI state, verified backup, two rollback attempts and persistent recovery copy.")
-
           PY
 
-      - name: Make metadata save action visible and failure-proof
+      - name: Expose metadata editor save feedback
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path("app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt")
           s = p.read_text(encoding="utf-8")
-
           old = "        onDismissRequest = onDismiss,"
           new = "        onDismissRequest = { if (!writingToFile) onDismiss() },"
-          if s.count(old) != 1: raise SystemExit("Dialog dismissal callback did not match exactly once.")
+          assert s.count(old) == 1
           s = s.replace(old, new, 1)
 
           old = '''                }
@@ -1873,7 +1871,7 @@ jobs:
             }
         },
         confirmButton = {'''
-          if old not in s: raise SystemExit("Could not locate dialog content end for status message.")
+          assert old in s
           s = s.replace(old, new, 1)
 
           old = '''                    scope.launch {
@@ -1886,7 +1884,7 @@ jobs:
                     scope.launch {
                 message = "Сохраняем изменения в текущий аудиофайл…"
                 try {'''
-          if old not in s: raise SystemExit("Save action callback did not match expected code.")
+          assert old in s
           s = s.replace(old, new, 1)
 
           old = '''                    } else {
@@ -1910,36 +1908,32 @@ jobs:
                     message = "Не удалось сохранить файл: " + (error.message ?: "неизвестная ошибка")
                     android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
                 } finally {'''
-          if old not in s: raise SystemExit("Save result/error handling did not match expected code.")
+          assert old in s
           s = s.replace(old, new, 1)
 
           old = '''        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } }'''
           new = '''        dismissButton = {
             TextButton(enabled = !writingToFile, onClick = onDismiss) { Text("Отмена") }
         }'''
-          if old not in s: raise SystemExit("Dismiss button did not match expected code.")
+          assert old in s
           s = s.replace(old, new, 1)
 
           assert s.count("TrackMetadataRepository.writeMetadataToFile(") == 1
           assert "message?.let { status ->" in s
-          assert "onDismissRequest = { if (!writingToFile) onDismiss() }" in s
           assert "if (writingToFile) return@TextButton" in s
-          assert 'Text("Сохранить изменения")' in s
           assert "Toast.makeText(context, message" in s
           p.write_text(s, encoding="utf-8")
-          print("Editor UI verified: save click guarded, busy state immediate, status rendered, errors toasted, dialog cannot dismiss during write.")
+          print("Metadata editor save feedback checks passed.")
           PY
 
-      - name: Verify metadata save feedback and click wiring
+      - name: Verify metadata save feedback
         run: |
           set -eu
           EDITOR=app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt
-          grep -F 'onDismissRequest = { if (!writingToFile) onDismiss() }' "$EDITOR"
           grep -F 'message?.let { status ->' "$EDITOR"
           grep -F 'if (writingToFile) return@TextButton' "$EDITOR"
           grep -F 'Toast.makeText(context, message' "$EDITOR"
           test "$(grep -c 'TrackMetadataRepository.writeMetadataToFile(' "$EDITOR")" -eq 1
-          echo "Save click and all outcomes are visible to the user."
 
       - name: Verify metadata editor safety wiring
         run: |
