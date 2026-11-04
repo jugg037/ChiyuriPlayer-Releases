@@ -1875,9 +1875,9 @@ jobs:
           s = s.replace(old, new, 1)
 
           old = '''                    scope.launch {
-                writingToFile = true
-                message = "Сохраняем изменения в текущий аудиофайл…"
-                try {'''
+                          writingToFile = true
+                          message = "Сохраняем изменения в текущий аудиофайл…"
+                          try {'''
           new = '''                    if (writingToFile) return@TextButton
                     writingToFile = true
                     message = "Подготовка записи метаданных…"
