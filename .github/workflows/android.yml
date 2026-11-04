@@ -47,6 +47,547 @@ jobs:
           echo "===== Manifest ====="
           nl -ba app/src/main/AndroidManifest.xml
 
+      - name: Make update downloads persistent, cancellable and visible in notifications
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          base = Path("app/src/main/java/com/chiyuri/player")
+          updates = base / "AppUpdates.kt"
+          source = updates.read_text(encoding="utf-8")
+
+          imports = [
+              "import android.app.NotificationChannel",
+              "import android.app.NotificationManager",
+              "import android.app.PendingIntent",
+              "import android.content.BroadcastReceiver",
+              "import android.os.Handler",
+              "import android.os.Looper",
+              "import androidx.core.app.NotificationCompat",
+              "import androidx.core.app.NotificationManagerCompat",
+              "import kotlinx.coroutines.CancellationException",
+              "import kotlinx.coroutines.suspendCancellableCoroutine",
+              "import kotlinx.coroutines.currentCoroutineContext",
+              "import kotlinx.coroutines.ensureActive",
+              "import kotlin.coroutines.resume",
+              "import kotlin.coroutines.resumeWithException",
+              "import java.util.concurrent.atomic.AtomicReference",
+          ]
+          for item in imports:
+              if item not in source:
+                  source = source.replace("import android.content.Context\n", "import android.content.Context\n" + item + "\n", 1)
+
+          start = source.index("    suspend fun downloadAndVerify(")
+          end = source.index("\n    @Suppress(\"DEPRECATION\")", start)
+          method = r'''    suspend fun downloadAndVerify(
+              context: Context,
+              info: UpdateInfo,
+              fileName: String = "chiyuriplayer-update.apk",
+              onProgress: (Long, Long) -> Unit
+          ): File {
+              val apk = File(context.cacheDir, fileName)
+              apk.delete()
+              downloadFileCancellable(info, apk, onProgress)
+              return withContext(Dispatchers.IO) {
+                  currentCoroutineContext().ensureActive()
+                  val checksumConnection = URL(info.checksumUrl).openConnection() as HttpURLConnection
+                  val expected = try {
+                      checksumConnection.connectTimeout = 10000
+                      checksumConnection.readTimeout = 15000
+                      checksumConnection.getInputStream().bufferedReader().use {
+                          it.readText().trim().substringBefore(' ').lowercase()
+                      }
+                  } finally {
+                      checksumConnection.disconnect()
+                  }
+                  currentCoroutineContext().ensureActive()
+                  val digest = MessageDigest.getInstance("SHA-256")
+                  val actual = apk.inputStream().use { input ->
+                      val buffer = ByteArray(64 * 1024)
+                      while (true) {
+                          currentCoroutineContext().ensureActive()
+                          val count = input.read(buffer)
+                          if (count < 0) break
+                          if (count > 0) digest.update(buffer, 0, count)
+                      }
+                      digest.digest().joinToString("") { "%02x".format(it) }
+                  }
+                  check(expected.length == 64 && actual.equals(expected, true)) {
+                      "Контрольная сумма SHA-256 не совпадает"
+                  }
+                  currentCoroutineContext().ensureActive()
+                  verifySigner(context, apk)
+                  apk
+              }
+          }
+
+          private suspend fun downloadFileCancellable(
+              info: UpdateInfo,
+              apk: File,
+              onProgress: (Long, Long) -> Unit
+          ) = suspendCancellableCoroutine<Unit> { continuation ->
+              val connectionRef = AtomicReference<HttpURLConnection?>()
+              val threadRef = AtomicReference<Thread?>()
+              val worker = Thread({
+                  var connection: HttpURLConnection? = null
+                  try {
+                      connection = URL(info.apkUrl).openConnection() as HttpURLConnection
+                      connectionRef.set(connection)
+                      if (!continuation.isActive) {
+                          connection.disconnect()
+                          return@Thread
+                      }
+                      connection.connectTimeout = 15000
+                      connection.readTimeout = 30000
+                      connection.instanceFollowRedirects = true
+                      if (connection.responseCode !in 200..299) {
+                          error("Не удалось скачать APK: HTTP " + connection.responseCode)
+                      }
+                      val total = connection.contentLengthLong.takeIf { it > 0 } ?: info.sizeBytes
+                      connection.inputStream.use { input ->
+                          java.io.FileOutputStream(apk).use { output ->
+                              val buffer = ByteArray(64 * 1024)
+                              var done = 0L
+                              while (true) {
+                                  if (!continuation.isActive) throw CancellationException("Загрузка отменена")
+                                  val count = input.read(buffer)
+                                  if (count < 0) break
+                                  if (count == 0) continue
+                                  output.write(buffer, 0, count)
+                                  done += count
+                                  val completed = done
+                                  Handler(Looper.getMainLooper()).post {
+                                      if (continuation.isActive) onProgress(completed, total)
+                                  }
+                              }
+                              output.fd.sync()
+                          }
+                      }
+                      if (continuation.isActive) continuation.resume(Unit)
+                  } catch (failure: Throwable) {
+                      apk.delete()
+                      if (continuation.isActive) continuation.resumeWithException(failure)
+                  } finally {
+                      connection?.disconnect()
+                      connectionRef.set(null)
+                  }
+              }, "ChiyuriUpdateDownload").apply { isDaemon = true }
+              threadRef.set(worker)
+              continuation.invokeOnCancellation {
+                  connectionRef.getAndSet(null)?.disconnect()
+                  threadRef.get()?.interrupt()
+                  apk.delete()
+              }
+              worker.start()
+          }
+          '''
+          source = source[:start] + method + source[end:]
+
+          screen_start = source.index("@Composable\ninternal fun UpdateCenterScreen(")
+          screen_end = source.index("\n@Composable\ninternal fun AutoUpdateSettingsScreen(", screen_start)
+          screen = r'''@Composable
+          internal fun UpdateCenterScreen(modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier) {
+              val context = androidx.compose.ui.platform.LocalContext.current
+              val scope = androidx.compose.runtime.rememberCoroutineScope()
+              var update by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<UpdateInfo?>(null) }
+              var checking by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+              var status by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("Проверьте наличие новой версии") }
+              var error by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+              var workInfo by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<androidx.work.WorkInfo?>(null) }
+
+              androidx.compose.runtime.LaunchedEffect(context) {
+                  val manager = androidx.work.WorkManager.getInstance(context)
+                  while (true) {
+                      workInfo = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                          manager.getWorkInfosForUniqueWork(UpdateDownloadWorker.WORK_NAME).get().firstOrNull()
+                      }
+                      kotlinx.coroutines.delay(500)
+                  }
+              }
+              androidx.compose.runtime.LaunchedEffect(Unit) {
+                  if (update == null) {
+                      checking = true
+                      try {
+                          update = AppUpdates.checkLatest()
+                          status = if (update == null) "У вас установлена последняя версия." else "Найдено обновление."
+                      } catch (e: Exception) {
+                          error = e.message ?: "Ошибка проверки обновлений"
+                          status = "Проверка не завершена"
+                      } finally {
+                          checking = false
+                      }
+                  }
+              }
+
+              val state = workInfo?.state
+              val downloading = state == androidx.work.WorkInfo.State.RUNNING ||
+                  state == androidx.work.WorkInfo.State.ENQUEUED
+              val progress = workInfo?.progress?.getInt("progress", 0)?.coerceIn(0, 100) ?: 0
+              val downloadedPath = workInfo?.outputData?.getString("apk_path")
+              val downloadError = if (state == androidx.work.WorkInfo.State.FAILED) {
+                  workInfo?.outputData?.getString("error") ?: "Не удалось скачать обновление."
+              } else null
+              val downloadStatus = when (state) {
+                  androidx.work.WorkInfo.State.RUNNING,
+                  androidx.work.WorkInfo.State.ENQUEUED -> "Загрузка продолжается в фоне и не сбрасывается при смене вкладки."
+                  androidx.work.WorkInfo.State.SUCCEEDED -> "APK загружен. SHA-256 и подпись проверены."
+                  androidx.work.WorkInfo.State.CANCELLED -> "Загрузка отменена."
+                  androidx.work.WorkInfo.State.FAILED -> "Загрузка не завершена."
+                  else -> null
+              }
+
+              androidx.compose.foundation.layout.Column(
+                  modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()),
+                  verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
+              ) {
+                  androidx.compose.material3.Card(
+                      colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                  ) {
+                      androidx.compose.foundation.layout.Column(
+                          Modifier.padding(18.dp),
+                          verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)
+                      ) {
+                          androidx.compose.material3.Icon(
+                              androidx.compose.material.icons.Icons.Default.SystemUpdate,
+                              null,
+                              tint = MaterialTheme.colorScheme.primary,
+                              modifier = Modifier.size(42.dp)
+                          )
+                          androidx.compose.material3.Text("Центр обновлений", style = MaterialTheme.typography.titleLarge)
+                          androidx.compose.material3.Text(
+                              "Установлена версия " + AppUpdates.CURRENT_VERSION,
+                              color = MaterialTheme.colorScheme.onSurfaceVariant
+                          )
+                          androidx.compose.material3.Text(downloadStatus ?: status, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                          if (checking) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+                          if (downloading) {
+                              androidx.compose.material3.LinearProgressIndicator(
+                                  progress = { progress / 100f },
+                                  modifier = Modifier.fillMaxWidth(),
+                                  color = MaterialTheme.colorScheme.primary,
+                                  trackColor = MaterialTheme.colorScheme.surfaceVariant
+                              )
+                              androidx.compose.material3.Text("Загрузка " + progress + "%")
+                          }
+                          error?.let { androidx.compose.material3.Text(it, color = MaterialTheme.colorScheme.error) }
+                          downloadError?.let { androidx.compose.material3.Text(it, color = MaterialTheme.colorScheme.error) }
+                          update?.let { info ->
+                              androidx.compose.material3.HorizontalDivider()
+                              androidx.compose.material3.Text(
+                                  "Доступна версия " + info.version,
+                                  style = MaterialTheme.typography.titleMedium,
+                                  color = MaterialTheme.colorScheme.primary
+                              )
+                              androidx.compose.material3.Text(
+                                  info.notes.ifBlank { "Исправления ошибок и улучшения стабильности." },
+                                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                              )
+                              androidx.compose.material3.Text(
+                                  "Размер: " + if (info.sizeBytes > 0) String.format(java.util.Locale.getDefault(), "%.1f МБ", info.sizeBytes / 1048576f) else "неизвестен",
+                                  style = MaterialTheme.typography.bodySmall
+                              )
+                              if (state == androidx.work.WorkInfo.State.SUCCEEDED &&
+                                  !downloadedPath.isNullOrBlank() && java.io.File(downloadedPath).exists()
+                              ) {
+                                  androidx.compose.material3.Button(
+                                      onClick = { AppUpdates.install(context, java.io.File(downloadedPath)) },
+                                      modifier = Modifier.fillMaxWidth()
+                                  ) { androidx.compose.material3.Text("Установить загруженное обновление") }
+                              } else {
+                                  androidx.compose.material3.Button(
+                                      enabled = !downloading && !checking,
+                                      onClick = {
+                                          val request = androidx.work.OneTimeWorkRequestBuilder<UpdateDownloadWorker>()
+                                              .setInputData(
+                                                  androidx.work.workDataOf(
+                                                      "version" to info.version,
+                                                      "versionCode" to info.versionCode,
+                                                      "notes" to info.notes,
+                                                      "apkUrl" to info.apkUrl,
+                                                      "checksumUrl" to info.checksumUrl,
+                                                      "sizeBytes" to info.sizeBytes
+                                                  )
+                                              )
+                                              .build()
+                                          androidx.work.WorkManager.getInstance(context).enqueueUniqueWork(
+                                              UpdateDownloadWorker.WORK_NAME,
+                                              androidx.work.ExistingWorkPolicy.REPLACE,
+                                              request
+                                          )
+                                          error = null
+                                      },
+                                      modifier = Modifier.fillMaxWidth()
+                                  ) {
+                                      androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Download, null)
+                                      androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
+                                      androidx.compose.material3.Text("Скачать обновление")
+                                  }
+                              }
+                          }
+                          if (downloading) {
+                              androidx.compose.material3.OutlinedButton(
+                                  onClick = {
+                                      androidx.work.WorkManager.getInstance(context).cancelUniqueWork(UpdateDownloadWorker.WORK_NAME)
+                                      UpdateDownloadNotifications.cancel(context)
+                                  },
+                                  modifier = Modifier.fillMaxWidth()
+                              ) { androidx.compose.material3.Text("Отменить загрузку") }
+                          }
+                          androidx.compose.material3.OutlinedButton(
+                              enabled = !checking && !downloading,
+                              onClick = {
+                                  scope.launch {
+                                      checking = true
+                                      error = null
+                                      status = "Проверяем GitHub…"
+                                      try {
+                                          update = AppUpdates.checkLatest()
+                                          status = if (update == null) "У вас установлена последняя версия." else "Найдено обновление."
+                                      } catch (e: Exception) {
+                                          error = e.message ?: "Ошибка проверки обновлений"
+                                          status = "Проверка не завершена"
+                                      } finally {
+                                          checking = false
+                                      }
+                                  }
+                              },
+                              modifier = Modifier.fillMaxWidth()
+                          ) {
+                              androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Refresh, null)
+                              androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
+                              androidx.compose.material3.Text("Проверить обновления")
+                          }
+                      }
+                  }
+                  androidx.compose.material3.Text(
+                      "Загрузка продолжается при переключении вкладок. Её можно отменить здесь или прямо из системного уведомления. Перед установкой проверяются SHA-256 и сертификат подписи.",
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.colorScheme.onSurfaceVariant
+                  )
+              }
+          }
+          '''
+          source = source[:screen_start] + screen + source[screen_end:]
+          source += r'''
+
+          internal class UpdateDownloadWorker(
+              context: Context,
+              params: WorkerParameters
+          ) : CoroutineWorker(context, params) {
+              override suspend fun getForegroundInfo(): androidx.work.ForegroundInfo {
+                  return UpdateDownloadNotifications.foregroundInfo(
+                      applicationContext,
+                      0L,
+                      inputData.getLong("sizeBytes", 0L),
+                      inputData.getString("version").orEmpty()
+                  )
+              }
+
+              override suspend fun doWork(): Result {
+                  val version = inputData.getString("version") ?: return Result.failure()
+                  val apkUrl = inputData.getString("apkUrl") ?: return Result.failure()
+                  val checksumUrl = inputData.getString("checksumUrl") ?: return Result.failure()
+                  val info = UpdateInfo(
+                      version,
+                      inputData.getInt("versionCode", 0),
+                      inputData.getString("notes").orEmpty(),
+                      apkUrl,
+                      checksumUrl,
+                      inputData.getLong("sizeBytes", 0L)
+                  )
+                  return try {
+                      setForeground(getForegroundInfo())
+                      val file = AppUpdates.downloadAndVerify(
+                          applicationContext,
+                          info,
+                          "chiyuriplayer-update-" + id + ".apk"
+                      ) { done, total ->
+                          val percent = if (total > 0L) ((done * 100L) / total).toInt().coerceIn(0, 100) else 0
+                          setProgressAsync(androidx.work.workDataOf(
+                              "progress" to percent, "done" to done, "total" to total
+                          ))
+                          setForegroundAsync(
+                              UpdateDownloadNotifications.foregroundInfo(applicationContext, done, total, version)
+                          )
+                      }
+                      UpdateDownloadNotifications.cancel(applicationContext)
+                      UpdateDownloadNotifications.showComplete(applicationContext, version)
+                      Result.success(androidx.work.workDataOf("apk_path" to file.absolutePath))
+                  } catch (cancelled: CancellationException) {
+                      UpdateDownloadNotifications.cancel(applicationContext)
+                      throw cancelled
+                  } catch (failure: Exception) {
+                      UpdateDownloadNotifications.cancel(applicationContext)
+                      Result.failure(androidx.work.workDataOf("error" to (failure.message ?: "Не удалось скачать обновление")))
+                  }
+              }
+
+              companion object { const val WORK_NAME = "chiyuri_manual_update" }
+          }
+
+          internal object UpdateDownloadNotifications {
+              private const val CHANNEL_ID = "chiyuri_update_download"
+              private const val PROGRESS_ID = 3140
+              private const val COMPLETE_ID = 3141
+
+              private fun ensureChannel(context: Context) {
+                  if (Build.VERSION.SDK_INT >= 26) {
+                      val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                      manager.createNotificationChannel(
+                          NotificationChannel(CHANNEL_ID, "Загрузка обновлений ChiyuriPlayer", NotificationManager.IMPORTANCE_LOW).apply {
+                              description = "Ход загрузки и проверки обновлений"
+                              setShowBadge(false)
+                          }
+                      )
+                  }
+              }
+
+              fun foregroundInfo(context: Context, done: Long, total: Long, version: String): androidx.work.ForegroundInfo {
+                  ensureChannel(context)
+                  val cancelIntent = Intent(context, CancelUpdateDownloadReceiver::class.java)
+                  val cancelPending = PendingIntent.getBroadcast(
+                      context, PROGRESS_ID, cancelIntent,
+                      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                  )
+                  val percent = if (total > 0L) ((done * 100L) / total).toInt().coerceIn(0, 100) else 0
+                  val sizeText = if (total > 0L) formatSize(done) + " / " + formatSize(total) else formatSize(done)
+                  val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                      .setSmallIcon(android.R.drawable.stat_sys_download)
+                      .setContentTitle("ChiyuriPlayer · обновление " + version)
+                      .setContentText("Загрузка " + percent + "% · " + sizeText)
+                      .setProgress(100, percent, false)
+                      .setColor(0xFFB20D24.toInt())
+                      .setColorized(true)
+                      .setOngoing(true)
+                      .setOnlyAlertOnce(true)
+                      .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+                      .setPriority(NotificationCompat.PRIORITY_LOW)
+                      .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Отменить", cancelPending)
+                      .build()
+                  return androidx.work.ForegroundInfo(
+                      PROGRESS_ID,
+                      notification,
+                      android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                  )
+              }
+
+              fun showComplete(context: Context, version: String) {
+                  ensureChannel(context)
+                  val open = Intent(context, MainActivity::class.java)
+                      .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                      .putExtra("open_updates", true)
+                  val pending = PendingIntent.getActivity(
+                      context, COMPLETE_ID, open,
+                      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                  )
+                  val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                      .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                      .setContentTitle("Обновление ChiyuriPlayer загружено")
+                      .setContentText("Версия " + version + " скачана и проверена. Нажмите, чтобы установить.")
+                      .setContentIntent(pending)
+                      .setAutoCancel(true)
+                      .setColor(0xFFB20D24.toInt())
+                      .setColorized(true)
+                      .setOnlyAlertOnce(true)
+                      .build()
+                  runCatching { NotificationManagerCompat.from(context).notify(COMPLETE_ID, notification) }
+              }
+
+              fun cancel(context: Context) {
+                  runCatching { NotificationManagerCompat.from(context).cancel(PROGRESS_ID) }
+              }
+
+              private fun formatSize(bytes: Long): String {
+                  if (bytes < 1024L) return bytes.toString() + " Б"
+                  if (bytes < 1024L * 1024L) return String.format(java.util.Locale.getDefault(), "%.0f КБ", bytes / 1024f)
+                  return String.format(java.util.Locale.getDefault(), "%.1f МБ", bytes / (1024f * 1024f))
+              }
+          }
+
+          internal class CancelUpdateDownloadReceiver : BroadcastReceiver() {
+              override fun onReceive(context: Context, intent: Intent?) {
+                  androidx.work.WorkManager.getInstance(context).cancelUniqueWork(UpdateDownloadWorker.WORK_NAME)
+                  UpdateDownloadNotifications.cancel(context)
+              }
+          }
+          '''
+          updates.write_text(source, encoding="utf-8")
+
+          service = base / "PlaybackService.kt"
+          playback = service.read_text(encoding="utf-8")
+          if "DefaultMediaNotificationProvider" not in playback:
+              playback = playback.replace(
+                  "import androidx.media3.session.MediaSessionService",
+                  "import androidx.media3.session.MediaSessionService\nimport androidx.media3.session.DefaultMediaNotificationProvider\nimport androidx.media3.common.util.UnstableApi"
+              )
+              playback = playback.replace(
+                  "class PlaybackService : MediaSessionService() {",
+                  "@OptIn(UnstableApi::class)\nclass PlaybackService : MediaSessionService() {"
+              )
+              playback = playback.replace(
+                  "        super.onCreate()\n        val player = ExoPlayer.Builder(this).build()",
+                  """        super.onCreate()
+                  val notificationProvider = DefaultMediaNotificationProvider.Builder(this)
+                      .setChannelId("chiyuri_media_playback")
+                      .setChannelName(R.string.chiyuri_playback_channel)
+                      .setNotificationId(1001)
+                      .build()
+                  notificationProvider.setSmallIcon(R.drawable.media3_notification_small_icon)
+                  setMediaNotificationProvider(notificationProvider)
+                  val player = ExoPlayer.Builder(this).build()"""
+              )
+              service.write_text(playback, encoding="utf-8")
+
+          res = Path("app/src/main/res")
+          drawable = res / "drawable"
+          values = res / "values"
+          drawable.mkdir(parents=True, exist_ok=True)
+          values.mkdir(parents=True, exist_ok=True)
+          vectors = {
+              "media3_notification_small_icon.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFFFFFFF" android:pathData="M12,1.5 L22,7.2 L22,16.8 L12,22.5 L2,16.8 L2,7.2 Z"/></vector>""",
+              "media3_icon_play.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFFFFFFF" android:pathData="M12,1.5 L22,7.2 L22,16.8 L12,22.5 L2,16.8 L2,7.2 Z M9,6.5 L9,17.5 L18,12 Z"/></vector>""",
+              "media3_icon_pause.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFFFFFFF" android:pathData="M12,1.5 L22,7.2 L22,16.8 L12,22.5 L2,16.8 L2,7.2 Z M7,6.5 L10.5,6.5 L10.5,17.5 L7,17.5 Z M13.5,6.5 L17,6.5 L17,17.5 L13.5,17.5 Z"/></vector>""",
+              "media3_icon_previous.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFFFFFFF" android:pathData="M12,1.5 L22,7.2 L22,16.8 L12,22.5 L2,16.8 L2,7.2 Z M6,6.5 L8.5,6.5 L8.5,17.5 L6,17.5 Z M18,6.5 L18,17.5 L9.5,12 Z"/></vector>""",
+              "media3_icon_next.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFFFFFFF" android:pathData="M12,1.5 L22,7.2 L22,16.8 L12,22.5 L2,16.8 L2,7.2 Z M15.5,6.5 L18,6.5 L18,17.5 L15.5,17.5 Z M6,6.5 L14.5,12 L6,17.5 Z"/></vector>""",
+          }
+          for name, data in vectors.items():
+              (drawable / name).write_text(data + "\n", encoding="utf-8")
+
+          (values / "chiyuri_notification_strings.xml").write_text("""<resources>
+              <string name="chiyuri_playback_channel">Воспроизведение ChiyuriPlayer</string>
+              <string name="media3_controls_play_description">Воспроизвести</string>
+              <string name="media3_controls_pause_description">Пауза</string>
+              <string name="media3_controls_seek_to_previous_description">Предыдущий трек</string>
+              <string name="media3_controls_seek_to_next_description">Следующий трек</string>
+          </resources>
+          """, encoding="utf-8")
+
+          manifest = Path("app/src/main/AndroidManifest.xml")
+          m = manifest.read_text(encoding="utf-8")
+          if "FOREGROUND_SERVICE_DATA_SYNC" not in m:
+              m = m.replace(
+                  '<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />',
+                  '<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />'
+              )
+          if 'xmlns:tools=' not in m:
+              m = m.replace(
+                  '<manifest xmlns:android="http://schemas.android.com/apk/res/android">',
+                  '<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">'
+              )
+          if "CancelUpdateDownloadReceiver" not in m:
+              m = m.replace(
+                  "    </application>",
+                  """        <receiver android:name=".CancelUpdateDownloadReceiver" android:exported="false" />
+                  <service
+                      android:name="androidx.work.impl.foreground.SystemForegroundService"
+                      android:foregroundServiceType="dataSync"
+                      tools:node="merge" />
+              </application>"""
+              )
+          manifest.write_text(m, encoding="utf-8")
+          print("Persistent WorkManager download, active network cancellation, progress notification and branded Media3 controls injected.")
+          PY
+
       - name: Set single Gradle app version
         run: |
           python3 - <<'PY'
