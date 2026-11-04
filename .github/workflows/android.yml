@@ -319,7 +319,7 @@ jobs:
           screen.write_text(ui, encoding="utf-8")
 
           gradle = Path("app/build.gradle.kts")
-          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.2.9"', 'versionName = "0.3.9"')
+          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.2.9"', 'versionName = "0.4.0"')
           gradle.write_text(g, encoding="utf-8")
           print("Removed logo shadow blur; expanded lyrics lookup to LRCLIB, lyrics.ovh and Deezer suggestions.")
           PY
@@ -473,8 +473,8 @@ jobs:
 
           gradle = Path("app/build.gradle.kts")
           g = gradle.read_text(encoding="utf-8")
-          g = g.replace('versionName = "0.2.8"', 'versionName = "0.2.9"')
-          g = g.replace('versionName = "0.2.1"', 'versionName = "0.2.9"')
+          g = g.replace('versionName = "0.2.8"', 'versionName = "0.4.0"')
+          g = g.replace('versionName = "0.2.1"', 'versionName = "0.4.0"')
           g = g.replace("buildFeatures { compose = true }", "buildFeatures { compose = true; buildConfig = true }")
           if "buildConfig = true" not in g:
               raise SystemExit("Could not enable BuildConfig generation.")
@@ -787,7 +787,7 @@ jobs:
           }
           """, encoding="utf-8")
           gradle = Path("app/build.gradle.kts")
-          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.3.0"', 'versionName = "0.3.9"')
+          g = gradle.read_text(encoding="utf-8").replace('versionName = "0.3.0"', 'versionName = "0.4.0"')
           gradle.write_text(g, encoding="utf-8")
           print("Connected lyrics panel to expanded mini-player; added timed/plain rendering.")
           PY
@@ -808,6 +808,20 @@ jobs:
               raise SystemExit("Duplicate mini-player content remains after cleanup.")
           p.write_text(s, encoding="utf-8")
           print("Removed duplicate lower lyrics preview and metadata button; retained synchronized lyrics panel at the top.")
+          PY
+
+      - name: Enforce final app version after all source patches
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path("app/build.gradle.kts")
+          s = p.read_text(encoding="utf-8")
+          s, count = re.subn(r'(?m)^(\\s*versionName\\s*=\\s*)"[^"]+"', r'\\1"0.4.0"', s, count=1)
+          if count != 1 or not re.search(r'(?m)^\\s*versionName\\s*=\\s*"0.4.0"', s):
+              raise SystemExit("Final versionName enforcement failed.")
+          p.write_text(s, encoding="utf-8")
+          print("FINAL VERSION VERIFIED: versionName=0.4.0; VERSION_CODE=310 is supplied to Gradle.")
           PY
 
       - name: Set up JDK 17
@@ -842,7 +856,7 @@ jobs:
           test -s "$RUNNER_TEMP/chiyuri-signing/release.jks"
 
       - name: Run unit tests
-        run: gradle testDebugUnitTest -PVERSION_CODE=309
+        run: gradle testDebugUnitTest -PVERSION_CODE=310
 
       - name: Build signed release APK
         env:
@@ -854,36 +868,36 @@ jobs:
           test -n "$CHIYURI_KEYSTORE_PASSWORD"
           test -n "$CHIYURI_KEY_ALIAS"
           test -n "$CHIYURI_KEY_PASSWORD"
-          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=309
+          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=310
 
       - name: Verify APK signature
         run: |
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
-          sha256sum "$APK" | tee ChiyuriPlayer-0.3.9.sha256
+          sha256sum "$APK" | tee ChiyuriPlayer-0.4.0.sha256
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChiyuriPlayer-0.3.9
+          name: ChiyuriPlayer-0.4.0
           path: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.3.9.sha256
+            ChiyuriPlayer-0.4.0.sha256
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.3.9
-          name: ChiyuriPlayer 0.3.9
+          tag_name: v0.4.0
+          name: ChiyuriPlayer 0.4.0
           body: |
             Исправлено отображение текста песни в раскрытом мини-плеере: LRC-синхронизация, подсветка текущей строки и обычный прокручиваемый текст. Остальные изменения интерфейса сохранены.
             Unit-тесты и проверка подписи должны завершиться успешно.
             APK подписан тем же постоянным ключом, что и предыдущая версия.
           files: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-0.3.9.sha256
+            ChiyuriPlayer-0.4.0.sha256
           make_latest: true
           fail_on_unmatched_files: true
