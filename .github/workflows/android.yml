@@ -18,8 +18,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.1"
-      APP_VERSION_CODE: "311"
+      APP_VERSION_NAME: "0.4.2"
+      APP_VERSION_CODE: "312"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -825,6 +825,152 @@ jobs:
           print("Removed duplicate lower lyrics preview and metadata button; retained synchronized lyrics panel at the top.")
           PY
 
+      - name: Add mini-player metadata editor and multi-source autofill
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          base = Path("app/src/main/java/com/chiyuri/player")
+          main = base / "MainActivity.kt"
+          source = main.read_text(encoding="utf-8")
+          previous = '                GothicIconButton(onClick = { player.seekToPreviousMediaItem() }, enabled = player.currentMediaItemIndex > 0) {'
+          editor = '''                GothicIconButton(
+                    onClick = onEditMetadata,
+                    enabled = player.currentMediaItem != null
+                ) {
+                    GothicIcon(Icons.Default.Edit, contentDescription = "Редактировать информацию о треке", tint = MaterialTheme.colorScheme.onSurface)
+                }
+          '''
+          if "Редактировать информацию о треке" not in source:
+              if previous not in source:
+                  raise SystemExit("Mini-player previous-track control was not found.")
+              source = source.replace(previous, editor + previous, 1)
+          main.write_text(source, encoding="utf-8")
+
+          metadata = base / "TrackMetadataRepository.kt"
+          source = metadata.read_text(encoding="utf-8")
+          if "suspend fun searchMultiple(" not in source:
+              source = source.replace("import org.json.JSONObject\n", "import org.json.JSONObject\nimport kotlinx.coroutines.async\n", 1)
+              marker = "    /**\n     * Writes metadata into the selected MP3, FLAC, or M4A/MP4 audio file."
+              multi = '''    /**
+     * Queries independent metadata catalogues in parallel. The editor merges only missing values.
+     */
+    suspend fun searchMultiple(title: String, artist: String): List<TrackMetadata> =
+        kotlinx.coroutines.coroutineScope {
+            val itunes = async { search(title, artist) }
+            val deezer = async { searchDeezer(title, artist) }
+            listOfNotNull(
+                runCatching { itunes.await() }.getOrNull(),
+                runCatching { deezer.await() }.getOrNull()
+            )
+        }
+
+    private suspend fun searchDeezer(title: String, artist: String): TrackMetadata? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            if (title.isBlank()) return@withContext null
+            val term = listOf(artist, title).filter { it.isNotBlank() }.joinToString(" ")
+            val encoded = URLEncoder.encode(term, Charsets.UTF_8.name())
+            val connection = (URL("https://api.deezer.com/search/track?q=$encoded&limit=15").openConnection() as HttpURLConnection)
+            try {
+                connection.connectTimeout = 8000
+                connection.readTimeout = 8000
+                connection.setRequestProperty("Accept", "application/json")
+                if (connection.responseCode !in 200..299) return@withContext null
+                val json = JSONObject(connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() })
+                val results = json.optJSONArray("data") ?: return@withContext null
+                val best = (0 until results.length())
+                    .mapNotNull { results.optJSONObject(it) }
+                    .maxByOrNull { item ->
+                        val candidateTitle = item.optString("title")
+                        val candidateArtist = item.optJSONObject("artist")?.optString("name").orEmpty()
+                        val titleScore = lyricsTextSimilarity(title, candidateTitle)
+                        val artistScore = if (artist.isBlank()) 0.55 else lyricsTextSimilarity(artist, candidateArtist)
+                        titleScore * 0.72 + artistScore * 0.28
+                    } ?: return@withContext null
+                val candidateTitle = best.optString("title")
+                val candidateArtist = best.optJSONObject("artist")?.optString("name").orEmpty()
+                val titleScore = lyricsTextSimilarity(title, candidateTitle)
+                val artistScore = if (artist.isBlank()) 0.55 else lyricsTextSimilarity(artist, candidateArtist)
+                if (titleScore < 0.55 || (artist.isNotBlank() && artistScore < 0.35)) return@withContext null
+                val album = best.optJSONObject("album")
+                TrackMetadata(
+                    title = candidateTitle,
+                    artist = candidateArtist,
+                    album = album?.optString("title").orEmpty(),
+                    year = best.optString("release_date").take(4),
+                    artworkUrl = album?.optString("cover_xl")?.takeIf { it.startsWith("https://") }.orEmpty()
+                )
+            } catch (_: Exception) {
+                null
+            } finally {
+                connection.disconnect()
+            }
+        }
+
+          '''
+              if marker not in source:
+                  raise SystemExit("TrackMetadataRepository insertion marker was not found.")
+              source = source.replace(marker, multi + marker, 1)
+              metadata.write_text(source, encoding="utf-8")
+
+          details = base / "TrackDetailsComponents.kt"
+          source = details.read_text(encoding="utf-8")
+          start_marker = "                Button(\n                    enabled = !loading && title.isNotBlank(),"
+          end_marker = "\n                }\n            }\n        },\n        confirmButton = {"
+          if "Автозаполнить пробелы из нескольких источников" not in source:
+              start = source.find(start_marker)
+              end = source.find(end_marker, start)
+              if start < 0 or end < 0:
+                  raise SystemExit("Metadata editor search button block was not found.")
+              end += len("\n                }")
+              replacement = '''                Button(
+                    enabled = !loading && !writingToFile && title.isNotBlank(),
+                    onClick = {
+                        scope.launch {
+                            loading = true
+                            message = "Проверяем iTunes и Deezer, затем ищем текст песни в LRCLIB…"
+                            try {
+                                val candidates = TrackMetadataRepository.searchMultiple(title, artist)
+                                candidates.forEach { found ->
+                                    if (title.isBlank() && found.title.isNotBlank()) title = found.title
+                                    if (artist.isBlank() && found.artist.isNotBlank()) artist = found.artist
+                                    if (album.isBlank() && found.album.isNotBlank()) album = found.album
+                                    if (year.isBlank() && found.year.isNotBlank()) year = found.year
+                                    if (artworkUrl.isBlank() && found.artworkUrl.isNotBlank()) artworkUrl = found.artworkUrl
+                                }
+                                val lyricTitle = title.ifBlank { candidates.firstOrNull()?.title.orEmpty() }
+                                val lyricArtist = artist.ifBlank { candidates.firstOrNull()?.artist.orEmpty() }
+                                var lyricsFound = false
+                                if (lyricTitle.isNotBlank() && (plainLyrics.isBlank() || syncedLyrics.isBlank())) {
+                                    val found = LyricsRepository.search(lyricArtist, lyricTitle, player.duration)
+                                    if (found != null) {
+                                        if (plainLyrics.isBlank()) plainLyrics = found.plainLyrics.orEmpty()
+                                        if (syncedLyrics.isBlank()) syncedLyrics = found.syncedLyrics.orEmpty()
+                                        lyricsFound = !found.plainLyrics.isNullOrBlank() || !found.syncedLyrics.isNullOrBlank()
+                                    }
+                                }
+                                message = if (candidates.isNotEmpty() || lyricsFound) {
+                                    "Проверены iTunes, Deezer и LRCLIB. Заполнены только пустые поля — проверь результат и нажми «Сохранить»."
+                                } else {
+                                    "Совпадений не найдено. Уже введённые данные не изменены."
+                                }
+                            } catch (error: Exception) {
+                                message = "Ошибка поиска: \${error.message ?: "нет соединения"}. Введённые данные сохранены."
+                            } finally {
+                                loading = false
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (loading) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    else Text("Автозаполнить пробелы из нескольких источников")
+                }'''
+              source = source[:start] + replacement + source[end:]
+          details.write_text(source, encoding="utf-8")
+          print("Mini-player edit shortcut and multi-source metadata/lyrics autofill installed.")
+          PY
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -901,7 +1047,7 @@ jobs:
           tag_name: v${{ env.APP_VERSION_NAME }}
           name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
           body: |
-            Исправлено отображение текста песни в раскрытом мини-плеере: LRC-синхронизация, подсветка текущей строки и обычный прокручиваемый текст. Остальные изменения интерфейса сохранены.
+            Добавлены кнопка редактирования метаданных из мини-плеера и автозаполнение пустых полей из iTunes, Deezer и LRCLIB. Сохранение в библиотеке приложения и запись поддерживаемых тегов в файл доступны отдельно.
             Unit-тесты и проверка подписи должны завершиться успешно.
             APK подписан тем же постоянным ключом, что и предыдущая версия.
           files: |
