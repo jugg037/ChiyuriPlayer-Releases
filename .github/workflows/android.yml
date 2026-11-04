@@ -817,8 +817,8 @@ jobs:
           import re
           p = Path("app/build.gradle.kts")
           s = p.read_text(encoding="utf-8")
-          s, count = re.subn(r'(?m)^(\\s*versionName\\s*=\\s*)"[^"]+"', r'\\1"0.4.0"', s, count=1)
-          if count != 1 or not re.search(r'(?m)^\\s*versionName\\s*=\\s*"0.4.0"', s):
+          s, count = re.subn(r'(?m)^(\s*versionName\s*=\s*)"[^"]+"', r'\1"0.4.0"', s, count=1)
+          if count != 1 or not re.search(r'(?m)^\s*versionName\s*=\s*"0.4.0"', s):
               raise SystemExit("Final versionName enforcement failed.")
           p.write_text(s, encoding="utf-8")
           print("FINAL VERSION VERIFIED: versionName=0.4.0; VERSION_CODE=310 is supplied to Gradle.")
