@@ -47,7 +47,7 @@ jobs:
           source = path.read_text(encoding="utf-8")
           version = os.environ["APP_VERSION_NAME"]
           updated, count = re.subn(
-              r'(?m)^(\\s*versionName\\s*=\\s*)"[^"]+"',
+              r'(?m)^(\s*versionName\s*=\s*)"[^"]+"',
               lambda match: match.group(1) + '"' + version + '"',
               source,
               count=1
@@ -877,7 +877,7 @@ jobs:
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
           BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
-          printf '%s\\n' "$BADGING" | grep -F "versionCode='$APP_VERSION_CODE' versionName='$APP_VERSION_NAME'" >/dev/null || {
+          printf '%s\n' "$BADGING" | grep -F "versionCode='$APP_VERSION_CODE' versionName='$APP_VERSION_NAME'" >/dev/null || {
             echo "::error::APK manifest version does not match the single Gradle release version."
             printf '%s\\n' "$BADGING" | grep "^package:"
             exit 1
@@ -888,10 +888,10 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChiyuriPlayer-$APP_VERSION_NAME
+          name: ChiyuriPlayer-${{ env.APP_VERSION_NAME }}
           path: |
             app/build/outputs/apk/release/app-release.apk
-            ChiyuriPlayer-$APP_VERSION_NAME.sha256
+            ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
           if-no-files-found: error
           retention-days: 30
 
