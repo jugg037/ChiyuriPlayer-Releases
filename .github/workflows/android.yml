@@ -18,8 +18,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.3"
-      APP_VERSION_CODE: "313"
+      APP_VERSION_NAME: "0.4.4"
+      APP_VERSION_CODE: "314"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -37,6 +37,15 @@ jobs:
           unzip -q ChiyuriPlayer-0.2.0-source-prep.zip -d /tmp/chiyuri-source
           test -f /tmp/chiyuri-source/ChiyuriPlayer-main/app/build.gradle.kts
           rsync -a --exclude='.github/' --exclude='README.md' --exclude='README_RU.md' /tmp/chiyuri-source/ChiyuriPlayer-main/ "$GITHUB_WORKSPACE"/
+
+      - name: Inspect update downloader and playback notification implementation
+        run: |
+          echo "===== AppUpdates.kt ====="
+          nl -ba app/src/main/java/com/chiyuri/player/AppUpdates.kt
+          echo "===== PlaybackService.kt ====="
+          nl -ba app/src/main/java/com/chiyuri/player/PlaybackService.kt
+          echo "===== Manifest ====="
+          nl -ba app/src/main/AndroidManifest.xml
 
       - name: Set single Gradle app version
         run: |
@@ -1080,6 +1089,7 @@ jobs:
           retention-days: 30
 
       - name: Publish GitHub Release
+        if: false # Temporarily disabled while the update and notification fixes are being integrated.
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.APP_VERSION_NAME }}
