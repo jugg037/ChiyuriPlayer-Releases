@@ -19,8 +19,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.6"
-      APP_VERSION_CODE: "316"
+      APP_VERSION_NAME: "0.4.7"
+      APP_VERSION_CODE: "317"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -1656,6 +1656,210 @@ jobs:
               path.write_text(source, encoding="utf-8")
           print("Metadata writes now fall back from rwt to w and retain byte-for-byte verification and rollback.")
           PY
+
+      - name: Harden metadata transaction, recovery and editor state
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          base = Path("app/src/main/java/com/chiyuri/player")
+          repository = base / "TrackMetadataRepository.kt"
+          source = repository.read_text(encoding="utf-8")
+          start = source.index("    suspend fun writeMetadataToFile(")
+          end = source.index("\n    /** Backward-compatible entry point", start)
+          method = r'''    suspend fun writeMetadataToFile(context: Context, uri: Uri, metadata: TrackMetadata): String? =
+          kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+              val mime = runCatching { context.contentResolver.getType(uri).orEmpty().lowercase() }.getOrDefault("")
+              val displayFileName = runCatching {
+                  context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                      if (cursor.moveToFirst()) {
+                          val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                          if (index >= 0) cursor.getString(index).orEmpty() else ""
+                      } else ""
+                  }.orEmpty()
+              }.getOrDefault("")
+              val extension = (displayFileName.ifBlank { uri.lastPathSegment.orEmpty() })
+                  .substringAfterLast('.', "").lowercase()
+              val format = when {
+                  mime == "audio/mpeg" || extension == "mp3" -> "mp3"
+                  mime == "audio/flac" || mime == "audio/x-flac" || extension == "flac" -> "flac"
+                  mime == "audio/mp4" || mime == "audio/x-m4a" || mime == "video/mp4" ||
+                      extension == "m4a" || extension == "mp4" -> "m4a"
+                  else -> return@withContext "Запись тегов поддерживается для MP3, FLAC и M4A. Этот формат пока не поддерживается."
+              }
+
+              val workDir = java.io.File(context.cacheDir, "media-tag-write").apply {
+                  if (!exists() && !mkdirs()) throw java.io.IOException("Не удалось создать временную папку.")
+                  if (!isDirectory || !canWrite()) throw java.io.IOException("Временная папка недоступна для записи.")
+              }
+              var original: java.io.File? = null
+              var rewritten: java.io.File? = null
+              var preserveTempBackup = false
+              try {
+                  original = java.io.File.createTempFile("original-", ".$format", workDir)
+                  rewritten = java.io.File.createTempFile("rewritten-", ".$format", workDir)
+
+                  val input = context.contentResolver.openInputStream(uri)
+                      ?: throw java.io.IOException("Не удалось открыть исходный файл для резервного копирования.")
+                  java.io.FileOutputStream(original).use { backupOutput ->
+                      input.use { it.copyTo(backupOutput) }
+                      backupOutput.fd.sync()
+                  }
+                  require(original.length() > 0L) { "Исходный файл пуст или не удалось создать его резервную копию." }
+
+                  val artwork = downloadArtwork(metadata.artworkUrl)
+                  when (format) {
+                      "mp3" -> Mp3Id3TagWriter.rewrite(original, rewritten, metadata, artwork)
+                      "flac" -> FlacMetadataWriter.rewrite(original, rewritten, metadata, artwork)
+                      "m4a" -> Mp4MetadataWriter.rewrite(original, rewritten, metadata, artwork)
+                  }
+                  require(rewritten.isFile && rewritten.length() > 0L) {
+                      "Не удалось подготовить новый файл с метаданными."
+                  }
+
+                  try {
+                      val destination = openTruncatingOutputStream(context, uri)
+                          ?: throw java.io.IOException("Поставщик файлов не разрешил запись.")
+                      destination.use { output ->
+                          rewritten.inputStream().use { inputStream -> inputStream.copyTo(output) }
+                          output.flush()
+                          if (output is java.io.FileOutputStream) output.fd.sync()
+                      }
+                      require(contentMatches(context, uri, rewritten)) {
+                          "Проверка записанного файла не пройдена: содержимое отличается от подготовленной версии."
+                      }
+                  } catch (writeError: Exception) {
+                      var restored = false
+                      for (attempt in 1..2) {
+                          try {
+                              val restoreStream = openTruncatingOutputStream(context, uri)
+                                  ?: throw java.io.IOException("Поставщик файлов не разрешил восстановление.")
+                              restoreStream.use { output ->
+                                  original.inputStream().use { inputStream -> inputStream.copyTo(output) }
+                                  output.flush()
+                                  if (output is java.io.FileOutputStream) output.fd.sync()
+                              }
+                              if (!contentMatches(context, uri, original)) {
+                                  throw java.io.IOException("Проверка восстановленного файла не пройдена.")
+                              }
+                              restored = true
+                              break
+                          } catch (_: Exception) {
+                              // Retry once; retain the original backup if both attempts fail.
+                          }
+                      }
+
+                      if (!restored) {
+                          val recoveryDir = java.io.File(context.filesDir, "metadata-recovery").apply {
+                              if (!exists() && !mkdirs()) throw java.io.IOException("Не удалось создать папку аварийных копий.")
+                          }
+                          val recovery = java.io.File.createTempFile("recovery-", ".$format", recoveryDir)
+                          try {
+                              java.io.FileOutputStream(recovery).use { output ->
+                                  original.inputStream().use { inputStream -> inputStream.copyTo(output) }
+                                  output.fd.sync()
+                              }
+                              require(recovery.length() == original.length()) {
+                                  "Размер аварийной копии не совпадает с оригиналом."
+                              }
+                              throw java.io.IOException(
+                                  "Запись и автоматическое восстановление не удались. Резервная копия исходного файла сохранена: \${recovery.absolutePath}. Не изменяйте оригинал до восстановления.",
+                                  writeError
+                              )
+                          } catch (backupError: Exception) {
+                              if (backupError.message?.contains(recovery.absolutePath) == true) throw backupError
+                              preserveTempBackup = true
+                              throw java.io.IOException(
+                                  "Запись и восстановление не удались. Не изменяйте оригинал. Временная резервная копия сохранена: \${original.absolutePath}. Ошибка копирования: \${backupError.message}",
+                                  writeError
+                              )
+                          }
+                      }
+                      throw java.io.IOException(
+                          "Запись не прошла проверку. Исходный файл восстановлен и проверен.",
+                          writeError
+                      )
+                  }
+                  null
+              } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                  throw cancelled
+              } catch (error: Exception) {
+                  val detail = error.message?.takeIf { it.isNotBlank() } ?: "Неизвестная ошибка."
+                  "Не удалось записать метаданные: $detail"
+              } finally {
+                  if (!preserveTempBackup) original?.delete()
+                  rewritten?.delete()
+              }
+          }
+          '''
+          source = source[:start] + method + source[end:]
+          repository.write_text(source, encoding="utf-8")
+
+          editor = base / "TrackDetailsComponents.kt"
+          ui = editor.read_text(encoding="utf-8")
+          duplicate = r'                OutlinedButton\(\n                    enabled = uri != null && !loading && !writingToFile && title\.isNotBlank\(\),.*?\n                \}\n(?=                Button\(\n                    enabled = !loading)'
+          ui, removed = re.subn(duplicate, "", ui, count=1, flags=re.S)
+          if removed != 1:
+              raise SystemExit(f"Expected to remove the duplicate file-write button; removed={removed}.")
+
+          old = '''                    scope.launch {
+                          writingToFile = true
+                          message = "Сохраняем изменения в текущий аудиофайл…"
+                          val error = TrackMetadataRepository.writeMetadataToFile(context, uri!!, edited)
+                          writingToFile = false
+                          if (error == null) {
+                              TrackMetadataRepository.saveOverride(context, uri, edited)
+                              onApply(edited)
+                          } else {
+                              message = "Не удалось сохранить файл: $error"
+                          }
+                      }'''
+          new = '''                    scope.launch {
+                          writingToFile = true
+                          message = "Сохраняем изменения в текущий аудиофайл…"
+                          try {
+                              val targetUri = uri ?: throw IllegalStateException("Не выбран аудиофайл.")
+                              val error = TrackMetadataRepository.writeMetadataToFile(context, targetUri, edited)
+                              if (error == null) {
+                                  TrackMetadataRepository.saveOverride(context, targetUri, edited)
+                                  onApply(edited)
+                              } else {
+                                  message = "Не удалось сохранить файл: $error"
+                              }
+                          } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                              message = "Сохранение отменено. Проверьте состояние исходного файла перед повторной попыткой."
+                              throw cancelled
+                          } catch (error: Exception) {
+                              message = "Не удалось сохранить файл: \${error.message ?: "неизвестная ошибка"}"
+                          } finally {
+                              writingToFile = false
+                          }
+                      }'''
+          if old not in ui:
+              raise SystemExit("The metadata editor Save callback did not match the expected audited version.")
+          ui = ui.replace(old, new, 1)
+          editor.write_text(ui, encoding="utf-8")
+
+          assert ui.count("TrackMetadataRepository.writeMetadataToFile(") == 1
+          assert "finally {\n                              writingToFile = false" in ui
+          assert "metadata-recovery" in source
+          assert "for (attempt in 1..2)" in source
+          assert "catch (cancelled: kotlinx.coroutines.CancellationException)" in source
+          print("Metadata editor hardened: one save action, exception-safe UI state, verified backup, two rollback attempts and persistent recovery copy.")
+          PY
+
+      - name: Verify metadata editor safety wiring
+        run: |
+          set -eu
+          REPO=app/src/main/java/com/chiyuri/player/TrackMetadataRepository.kt
+          EDITOR=app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt
+          grep -F 'for (attempt in 1..2)' "$REPO"
+          grep -F 'metadata-recovery' "$REPO"
+          grep -F 'catch (cancelled: kotlinx.coroutines.CancellationException)' "$REPO"
+          grep -F 'finally {' "$EDITOR"
+          test "$(grep -c 'TrackMetadataRepository.writeMetadataToFile(' "$EDITOR")" -eq 1
+          echo "Metadata save has one UI entry point, verified backup and recovery path."
 
       - name: Verify update cancellation wiring
         run: |
