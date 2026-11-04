@@ -1605,13 +1605,13 @@ jobs:
               "     */",
               "    private fun openTruncatingOutputStream(context: Context, uri: Uri): java.io.OutputStream {",
               "        var rwtFailure: Exception? = null",
-              "        try {",
+              "            context.contentResolver.openOutputStream(uri, \"rwt\")?.let { return it }",
               "            context.contentResolver.openOutputStream(uri, \\"rwt\\")?.let { return it }",
               "        } catch (error: Exception) {",
               "            rwtFailure = error",
               "        }",
-              "        return try {",
-              "            context.contentResolver.openOutputStream(uri, \\"w\\")",
+              "            context.contentResolver.openOutputStream(uri, \"w\")",
+              "                ?: throw java.io.IOException(\"Поставщик файлов не разрешил запись.\")",
               "                ?: throw java.io.IOException(\\"Поставщик файлов не разрешил запись.\\")",
               "        } catch (error: Exception) {",
               "            rwtFailure?.let(error::addSuppressed)",
@@ -1619,7 +1619,7 @@ jobs:
               "        }",
               "    }",
               ""
-          ]
+          helper = "\n".join(helper_lines) + "\n"
           helper = "\\n".join(helper_lines) + "\\n"
           if "private fun openTruncatingOutputStream(" not in source:
               count = source.count('context.contentResolver.openOutputStream(uri, "rwt")')
