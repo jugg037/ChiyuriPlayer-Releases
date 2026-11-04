@@ -1671,6 +1671,17 @@ jobs:
           grep -F 'cancelUniqueWork(UpdateDownloadWorker.WORK_NAME)' "$UPDATES"
           echo "Cancellation closes active streams, disconnects the HTTP request and removes the partial APK."
 
+      - name: Upload patched source for metadata audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChiyuriPlayer-source-audit-${{ github.run_number }}
+          path: |
+            app/src/main/java
+            app/src/test
+            app/build.gradle.kts
+          if-no-files-found: warn
+          retention-days: 3
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
