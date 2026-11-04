@@ -186,7 +186,7 @@ jobs:
           palette.write_text(t, encoding="utf-8")
           print("Added adaptive theme-colored blood overlay, 6dp artwork blur, and fixed crimson Gothic wordmark with OFL font.")
           PY
-          grep -nE 'runtime.getValue|runtime.setValue|signingInfo\\?\\.apkContentsSigners|foundation.layout.Row' app/src/main/java/com/chiyuri/player/AppUpdates.kt
+          grep -nE 'runtime.getValue|runtime.setValue|signingInfo\\?\.apkContentsSigners|foundation.layout.Row' app/src/main/java/com/chiyuri/player/AppUpdates.kt
 
       - name: Expand automatic lyrics search and sharpen Gothic wordmark
         run: |
@@ -484,22 +484,22 @@ jobs:
           u = updates.read_text(encoding="utf-8")
           import re
           u, version_count = re.subn(
-              r'(?m)^([ \\t]*const val CURRENT_VERSION\\s*=\\s*)".*?"',
-              r'\\1BuildConfig.VERSION_NAME',
+              r'(?m)^([ \t]*const val CURRENT_VERSION\s*=\s*)".*?"',
+              r'\1BuildConfig.VERSION_NAME',
               u,
               count=1
           )
           u, code_count = re.subn(
-              r'(?m)^([ \\t]*const val CURRENT_VERSION_CODE\\s*=\\s*)[0-9]+',
-              r'\\1BuildConfig.VERSION_CODE',
+              r'(?m)^([ \t]*const val CURRENT_VERSION_CODE\s*=\s*)[0-9]+',
+              r'\1BuildConfig.VERSION_CODE',
               u,
               count=1
           )
           if version_count != 1 or code_count != 1:
               raise SystemExit(f"Could not bind installed version to BuildConfig: version={version_count}, code={code_count}")
-          if not re.search(r'const val CURRENT_VERSION\\s*=\\s*BuildConfig\\.VERSION_NAME', u):
+          if not re.search(r'const val CURRENT_VERSION\s*=\s*BuildConfig\.VERSION_NAME', u):
               raise SystemExit("CURRENT_VERSION is not bound to BuildConfig.VERSION_NAME.")
-          if not re.search(r'const val CURRENT_VERSION_CODE\\s*=\\s*BuildConfig\\.VERSION_CODE', u):
+          if not re.search(r'const val CURRENT_VERSION_CODE\s*=\s*BuildConfig\.VERSION_CODE', u):
               raise SystemExit("CURRENT_VERSION_CODE is not bound to BuildConfig.VERSION_CODE.")
           updates.write_text(u, encoding="utf-8")
 
