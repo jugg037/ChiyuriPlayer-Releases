@@ -1599,25 +1599,25 @@ jobs:
           source = path.read_text(encoding="utf-8")
           marker = "    private fun contentMatches(context: Context, uri: Uri, expected: java.io.File): Boolean {"
           helper = """    /**
-     * SAF providers are inconsistent: some reject the read/write/truncate mode
-     * while supporting the standard truncating write mode. Always verify the
-     * resulting bytes after writing and retain the existing rollback path.
-     */
-    private fun openTruncatingOutputStream(context: Context, uri: Uri): java.io.OutputStream {
-        var rwtFailure: Exception? = null
-        try {
-            context.contentResolver.openOutputStream(uri, "rwt")?.let { return it }
-        } catch (error: Exception) {
-            rwtFailure = error
-        }
-        return try {
-            context.contentResolver.openOutputStream(uri, "w")
-                ?: throw java.io.IOException("Поставщик файлов не разрешил запись.")
-        } catch (error: Exception) {
-            rwtFailure?.let(error::addSuppressed)
-            throw error
-        }
-    }
+               * SAF providers are inconsistent: some reject the read/write/truncate mode
+               * while supporting the standard truncating write mode. Always verify the
+               * resulting bytes after writing and retain the existing rollback path.
+               */
+              private fun openTruncatingOutputStream(context: Context, uri: Uri): java.io.OutputStream {
+                  var rwtFailure: Exception? = null
+                  try {
+                      context.contentResolver.openOutputStream(uri, "rwt")?.let { return it }
+                  } catch (error: Exception) {
+                      rwtFailure = error
+                  }
+                  return try {
+                      context.contentResolver.openOutputStream(uri, "w")
+                          ?: throw java.io.IOException("Поставщик файлов не разрешил запись.")
+                  } catch (error: Exception) {
+                      rwtFailure?.let(error::addSuppressed)
+                      throw error
+                  }
+              }
 
 """
           if "private fun openTruncatingOutputStream(" not in source:
