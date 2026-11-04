@@ -19,8 +19,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.9"
-      APP_VERSION_CODE: "319"
+      APP_VERSION_NAME: "0.4.10"
+      APP_VERSION_CODE: "320"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -231,7 +231,7 @@ jobs:
                       while (true) {
                           workInfo = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                               manager.getWorkInfosForUniqueWork(UpdateDownloadWorker.WORK_NAME).get()
-                                  .firstOrNull { it.inputData.getInt("versionCode", -1) == targetVersionCode }
+                                  .firstOrNull { "chiyuri_update_version_" + targetVersionCode in it.tags }
                           }
                           kotlinx.coroutines.delay(500)
                       }
@@ -253,7 +253,7 @@ jobs:
               }
 
               val currentWorkInfo = workInfo?.takeIf { task ->
-                  update?.let { task.inputData.getInt("versionCode", -1) == it.versionCode } == true
+                  update?.let { "chiyuri_update_version_" + it.versionCode in task.tags } == true
               }
               val state = currentWorkInfo?.state
               val downloading = state == androidx.work.WorkInfo.State.RUNNING ||
@@ -326,7 +326,7 @@ jobs:
                                   style = MaterialTheme.typography.bodySmall
                               )
                               if (state == androidx.work.WorkInfo.State.SUCCEEDED &&
-                                  currentWorkInfo?.inputData?.getInt("versionCode", -1) == info.versionCode &&
+                                  ("chiyuri_update_version_" + info.versionCode) in (currentWorkInfo?.tags ?: emptySet()) &&
                                   !downloadedPath.isNullOrBlank() && java.io.File(downloadedPath).exists()
                               ) {
                                   androidx.compose.material3.Button(
@@ -343,6 +343,7 @@ jobs:
                                               notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                                           }
                                           val request = androidx.work.OneTimeWorkRequestBuilder<UpdateDownloadWorker>()
+                                               .addTag("chiyuri_update_version_" + info.versionCode)
                                               .setInputData(
                                                   androidx.work.workDataOf(
                                                       "version" to info.version,
@@ -1979,9 +1980,9 @@ jobs:
           set -eu
           UPDATES=app/src/main/java/com/chiyuri/player/AppUpdates.kt
           grep -F 'LaunchedEffect(context, update?.versionCode)' "$UPDATES"
-          grep -F 'it.inputData.getInt("versionCode", -1) == targetVersionCode' "$UPDATES"
+          grep -F '"chiyuri_update_version_" + targetVersionCode in it.tags' "$UPDATES"
           grep -F 'val currentWorkInfo = workInfo?.takeIf' "$UPDATES"
-          grep -F 'currentWorkInfo?.inputData?.getInt("versionCode", -1) == info.versionCode' "$UPDATES"
+          grep -F '("chiyuri_update_version_" + info.versionCode) in (currentWorkInfo?.tags ?: emptySet())' "$UPDATES"
           echo "Update install action is bound to the exact discovered versionCode."
 
       - name: Upload patched source for metadata audit
