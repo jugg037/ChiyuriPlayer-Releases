@@ -195,6 +195,14 @@ jobs:
               var error by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
               var workInfo by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<androidx.work.WorkInfo?>(null) }
 
+              var notificationPermissionMessage by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+              val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                  androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+              ) { granted ->
+                  notificationPermissionMessage = if (granted) null else
+                      "Уведомления отключены. Загрузка продолжится, но прогресс может быть недоступен в шторке."
+              }
+
               androidx.compose.runtime.LaunchedEffect(context) {
                   val manager = androidx.work.WorkManager.getInstance(context)
                   while (true) {
@@ -271,6 +279,9 @@ jobs:
                           }
                           error?.let { androidx.compose.material3.Text(it, color = MaterialTheme.colorScheme.error) }
                           downloadError?.let { androidx.compose.material3.Text(it, color = MaterialTheme.colorScheme.error) }
+                          notificationPermissionMessage?.let {
+                              androidx.compose.material3.Text(it, color = MaterialTheme.colorScheme.tertiary)
+                          }
                           update?.let { info ->
                               androidx.compose.material3.HorizontalDivider()
                               androidx.compose.material3.Text(
@@ -297,6 +308,11 @@ jobs:
                                   androidx.compose.material3.Button(
                                       enabled = !downloading && !checking,
                                       onClick = {
+                                          if (android.os.Build.VERSION.SDK_INT >= 33 &&
+                                              context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                                          ) {
+                                              notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                          }
                                           val request = androidx.work.OneTimeWorkRequestBuilder<UpdateDownloadWorker>()
                                               .setInputData(
                                                   androidx.work.workDataOf(
@@ -397,18 +413,24 @@ jobs:
                   )
                   return try {
                       setForeground(getForegroundInfo())
+                      var lastPercent = -1
+                      var lastReportedBytes = 0L
                       val file = AppUpdates.downloadAndVerify(
                           applicationContext,
                           info,
                           "chiyuriplayer-update-" + id + ".apk"
                       ) { done, total ->
                           val percent = if (total > 0L) ((done * 100L) / total).toInt().coerceIn(0, 100) else 0
-                          setProgressAsync(androidx.work.workDataOf(
-                              "progress" to percent, "done" to done, "total" to total
-                          ))
-                          setForegroundAsync(
-                              UpdateDownloadNotifications.foregroundInfo(applicationContext, done, total, version)
-                          )
+                          if (percent != lastPercent || done - lastReportedBytes >= 512L * 1024L || (total > 0L && done >= total)) {
+                              lastPercent = percent
+                              lastReportedBytes = done
+                              setProgressAsync(androidx.work.workDataOf(
+                                  "progress" to percent, "done" to done, "total" to total
+                              ))
+                              setForegroundAsync(
+                                  UpdateDownloadNotifications.foregroundInfo(applicationContext, done, total, version)
+                              )
+                          }
                       }
                       UpdateDownloadNotifications.cancel(applicationContext)
                       UpdateDownloadNotifications.showComplete(applicationContext, version)
@@ -452,7 +474,7 @@ jobs:
                   val percent = if (total > 0L) ((done * 100L) / total).toInt().coerceIn(0, 100) else 0
                   val sizeText = if (total > 0L) formatSize(done) + " / " + formatSize(total) else formatSize(done)
                   val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-                      .setSmallIcon(android.R.drawable.stat_sys_download)
+                      .setSmallIcon(R.drawable.media3_notification_small_icon)
                       .setContentTitle("ChiyuriPlayer · обновление " + version)
                       .setContentText("Загрузка " + percent + "% · " + sizeText)
                       .setProgress(100, percent, false)
@@ -481,7 +503,7 @@ jobs:
                       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                   )
                   val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-                      .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                      .setSmallIcon(R.drawable.media3_notification_small_icon)
                       .setContentTitle("Обновление ChiyuriPlayer загружено")
                       .setContentText("Версия " + version + " скачана и проверена. Нажмите, чтобы установить.")
                       .setContentIntent(pending)
@@ -544,11 +566,11 @@ jobs:
           drawable.mkdir(parents=True, exist_ok=True)
           values.mkdir(parents=True, exist_ok=True)
           vectors = {
-              "media3_notification_small_icon.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFFFFFFF" android:pathData="M12,1.5 L22,7.2 L22,16.8 L12,22.5 L2,16.8 L2,7.2 Z"/></vector>""",
-              "media3_icon_play.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFFFFFFF" android:pathData="M12,1.5 L22,7.2 L22,16.8 L12,22.5 L2,16.8 L2,7.2 Z M9,6.5 L9,17.5 L18,12 Z"/></vector>""",
-              "media3_icon_pause.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFFFFFFF" android:pathData="M12,1.5 L22,7.2 L22,16.8 L12,22.5 L2,16.8 L2,7.2 Z M7,6.5 L10.5,6.5 L10.5,17.5 L7,17.5 Z M13.5,6.5 L17,6.5 L17,17.5 L13.5,17.5 Z"/></vector>""",
-              "media3_icon_previous.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFFFFFFF" android:pathData="M12,1.5 L22,7.2 L22,16.8 L12,22.5 L2,16.8 L2,7.2 Z M6,6.5 L8.5,6.5 L8.5,17.5 L6,17.5 Z M18,6.5 L18,17.5 L9.5,12 Z"/></vector>""",
-              "media3_icon_next.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFFFFFFF" android:pathData="M12,1.5 L22,7.2 L22,16.8 L12,22.5 L2,16.8 L2,7.2 Z M15.5,6.5 L18,6.5 L18,17.5 L15.5,17.5 Z M6,6.5 L14.5,12 L6,17.5 Z"/></vector>""",
+              "media3_notification_small_icon.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFFFF" android:strokeWidth="2.2" android:strokeLineJoin="round" android:pathData="M12,2 L21.5,7.5 L21.5,16.5 L12,22 L2.5,16.5 L2.5,7.5 Z"/><path android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.8" android:strokeLineCap="round" android:pathData="M15.5,8.2 C14.5,7.2 13.4,6.8 12,6.8 C9.2,6.8 7.2,9 7.2,12 C7.2,15 9.2,17.2 12,17.2 C13.4,17.2 14.5,16.8 15.5,15.8"/></vector>""",
+              "media3_icon_play.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.5" android:strokeLineJoin="round" android:pathData="M12,1.8 L22,7.4 L22,16.6 L12,22.2 L2,16.6 L2,7.4 Z"/><path android:fillColor="#FFFFFFFF" android:pathData="M9,6.8 L9,17.2 L17.8,12 Z"/></vector>""",
+              "media3_icon_pause.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.5" android:strokeLineJoin="round" android:pathData="M12,1.8 L22,7.4 L22,16.6 L12,22.2 L2,16.6 L2,7.4 Z"/><path android:fillColor="#FFFFFFFF" android:pathData="M7.2,6.8 L10.2,6.8 L10.2,17.2 L7.2,17.2 Z M13.8,6.8 L16.8,6.8 L16.8,17.2 L13.8,17.2 Z"/></vector>""",
+              "media3_icon_previous.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.5" android:strokeLineJoin="round" android:pathData="M12,1.8 L22,7.4 L22,16.6 L12,22.2 L2,16.6 L2,7.4 Z"/><path android:fillColor="#FFFFFFFF" android:pathData="M6.5,6.8 L9.2,6.8 L9.2,17.2 L6.5,17.2 Z M18,6.8 L18,17.2 L10,12 Z"/></vector>""",
+              "media3_icon_next.xml": """<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.5" android:strokeLineJoin="round" android:pathData="M12,1.8 L22,7.4 L22,16.6 L12,22.2 L2,16.6 L2,7.4 Z"/><path android:fillColor="#FFFFFFFF" android:pathData="M14.8,6.8 L17.5,6.8 L17.5,17.2 L14.8,17.2 Z M6,6.8 L14,12 L6,17.2 Z"/></vector>""",
           }
           for name, data in vectors.items():
               (drawable / name).write_text(data + "\n", encoding="utf-8")
@@ -564,6 +586,11 @@ jobs:
 
           manifest = Path("app/src/main/AndroidManifest.xml")
           m = manifest.read_text(encoding="utf-8")
+          if "POST_NOTIFICATIONS" not in m:
+              m = m.replace(
+                  '<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />',
+                  '<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />'
+              )
           if "FOREGROUND_SERVICE_DATA_SYNC" not in m:
               m = m.replace(
                   '<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />',
@@ -1630,13 +1657,14 @@ jobs:
           retention-days: 30
 
       - name: Publish GitHub Release
-        if: false # Temporarily disabled while the update and notification fixes are being integrated.
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.APP_VERSION_NAME }}
           name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
           body: |
-            Кнопка редактирования информации о треке доступна прямо в мини-плеере. Автозаполнение проверяет iTunes, Deezer и LRCLIB, а сохранение записывает изменения в текущий аудиофайл.
+            Загрузка обновлений продолжается при переключении вкладок, а отмена останавливает сетевую загрузку и удаляет неполный APK.
+            В Центре обновлений и системном уведомлении отображается ход загрузки; отменить её можно прямо из шторки уведомлений.
+            Обновлён внешний вид системных кнопок управления воспроизведением в стиле ChiyuriPlayer.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
