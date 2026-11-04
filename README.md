@@ -4,9 +4,9 @@
 
 ## Актуальный релиз
 
-Последний опубликованный релиз: **0.4.5**.
+Последний опубликованный релиз: **0.4.6**.
 
-- [Скачать APK 0.4.5](https://github.com/jugg037/ChiyuriPlayer-Releases/releases/download/v0.4.5/app-release.apk)
+- [Скачать APK 0.4.6](https://github.com/jugg037/ChiyuriPlayer-Releases/releases/download/v0.4.6/app-release.apk)
 - [Все релизы](https://github.com/jugg037/ChiyuriPlayer-Releases/releases)
 - [История изменений](CHANGELOG.md)
 
