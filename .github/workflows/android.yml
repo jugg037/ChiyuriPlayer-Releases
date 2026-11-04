@@ -19,8 +19,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.8"
-      APP_VERSION_CODE: "318"
+      APP_VERSION_NAME: "0.4.9"
+      APP_VERSION_CODE: "319"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
