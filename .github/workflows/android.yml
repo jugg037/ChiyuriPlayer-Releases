@@ -484,13 +484,13 @@ jobs:
           u = updates.read_text(encoding="utf-8")
           import re
           u, version_count = re.subn(
-              r'(?m)^([ \t]*const val CURRENT_VERSION\s*=\s*)".*?"',
+              r'(?m)^([ \t]*(?:private\s+)?const val CURRENT_VERSION\s*=\s*)(?:"[^"]*"|BuildConfig\.VERSION_NAME)',
               r'\1BuildConfig.VERSION_NAME',
               u,
               count=1
           )
           u, code_count = re.subn(
-              r'(?m)^([ \t]*const val CURRENT_VERSION_CODE\s*=\s*)[0-9]+',
+              r'(?m)^([ \t]*(?:private\s+)?const val CURRENT_VERSION_CODE\s*=\s*)(?:[0-9]+|BuildConfig\.VERSION_CODE)',
               r'\1BuildConfig.VERSION_CODE',
               u,
               count=1
