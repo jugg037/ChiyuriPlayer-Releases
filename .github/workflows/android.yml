@@ -667,8 +667,9 @@ jobs:
               var resolved by remember(uri) { mutableStateOf(false) }
               var position by remember { mutableLongStateOf(0L) }
               val syncOffsetMs = remember(uri) { LyricsSyncOffsetStore.load(context, uri).toLong() }
+              val durationMs = player.duration.coerceAtLeast(0L)
               val listState = rememberLazyListState()
-              LaunchedEffect(uri, title, artist) {
+              LaunchedEffect(uri, title, artist, durationMs) {
                   lyrics = null
                   resolved = false
                   loading = uri != null
@@ -692,7 +693,7 @@ jobs:
                                           it.syncedLyrics?.takeIf(String::isNotBlank)
                                       )
                                   }?.takeIf { it.plainLyrics != null || it.syncedLyrics != null }
-                                  embeddedResult ?: LyricsRepository.search(artist, title, player.duration.coerceAtLeast(0L))
+                                  embeddedResult ?: LyricsRepository.search(artist, title, durationMs)
                               }
                           }
                       }
