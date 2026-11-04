@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
     paths:
       - ".github/workflows/android.yml"
+      - "ChiyuriPlayer-0.2.0-source-prep.zip"
   workflow_dispatch:
 
 permissions:
@@ -1691,7 +1692,7 @@ jobs:
           BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
           printf '%s\n' "$BADGING" | grep -F "versionCode='$APP_VERSION_CODE' versionName='$APP_VERSION_NAME'" >/dev/null || {
             echo "::error::APK manifest version does not match the single Gradle release version."
-            printf '%s\\n' "$BADGING" | grep "^package:"
+            printf '%s\n' "$BADGING" | grep "^package:"
             exit 1
           }
           echo "APK manifest verified: versionName=$APP_VERSION_NAME versionCode=$APP_VERSION_CODE"
@@ -1715,7 +1716,8 @@ jobs:
           body: |
             Загрузка обновлений продолжается при переключении вкладок, а отмена останавливает сетевую загрузку и удаляет неполный APK.
             В Центре обновлений и системном уведомлении отображается ход загрузки; отменить её можно прямо из шторки уведомлений.
-            Обновлён внешний вид системных кнопок управления воспроизведением в стиле ChiyuriPlayer.\nЗапись метаданных совместима с SAF-провайдерами, которые отклоняют режим rwt; после записи проверяются байты и при ошибке выполняется восстановление.
+            Обновлён внешний вид системных кнопок управления воспроизведением в стиле ChiyuriPlayer.
+            Запись метаданных совместима с SAF-провайдерами, которые отклоняют режим rwt; после записи проверяются байты и при ошибке выполняется восстановление.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
