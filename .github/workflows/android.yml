@@ -1843,87 +1843,88 @@ jobs:
           assert "catch (cancelled: kotlinx.coroutines.CancellationException)" in source
           print("Metadata editor hardened: one save action, exception-safe UI state, verified backup, two rollback attempts and persistent recovery copy.")
           PY
-
       - name: Expose metadata editor save feedback
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path("app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt")
           s = p.read_text(encoding="utf-8")
+          
           old = "        onDismissRequest = onDismiss,"
           new = "        onDismissRequest = { if (!writingToFile) onDismiss() },"
           assert s.count(old) == 1
           s = s.replace(old, new, 1)
-
-          old = '''                }
-            }
-        },
-        confirmButton = {'''
-          new = '''                }
-                message?.let { status ->
-                    Text(
-                        text = status,
-                        color = if (status.startsWith("Не удалось") || status.startsWith("Ошибка")) MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-        },
-        confirmButton = {'''
-          assert old in s
+          
+          old = """                }
+                      }
+                  },
+                  confirmButton = {"""
+          new = """                }
+                          message?.let { status ->
+                              Text(
+                                  text = status,
+                                  color = if (status.startsWith("Не удалось") || status.startsWith("Ошибка")) MaterialTheme.colorScheme.error
+                                      else MaterialTheme.colorScheme.onSurfaceVariant,
+                                  style = MaterialTheme.typography.bodySmall
+                              )
+                          }
+                      }
+                  },
+                  confirmButton = {"""
+          assert s.count(old) == 1
           s = s.replace(old, new, 1)
-
-          old = '''                    scope.launch {
+          
+          old = """                    scope.launch {
                           writingToFile = true
                           message = "Сохраняем изменения в текущий аудиофайл…"
-                          try {'''
-          new = '''                    if (writingToFile) return@TextButton
-                    writingToFile = true
-                    message = "Подготовка записи метаданных…"
-                    scope.launch {
-                message = "Сохраняем изменения в текущий аудиофайл…"
-                try {'''
-          assert old in s
+                          try {"""
+          new = """                    if (writingToFile) return@TextButton
+                              writingToFile = true
+                              message = "Подготовка записи метаданных…"
+                              scope.launch {
+                          message = "Сохраняем изменения в текущий аудиофайл…"
+                          try {"""
+          assert s.count(old) == 1
           s = s.replace(old, new, 1)
-
-          old = '''                    } else {
-                        message = "Не удалось сохранить файл: " + error
-                    }
-                } catch (cancelled: kotlinx.coroutines.CancellationException) {
-                    message = "Сохранение отменено. Проверьте состояние исходного файла перед повторной попыткой."
-                    throw cancelled
-                } catch (error: Exception) {
-                    message = "Не удалось сохранить файл: " + (error.message ?: "неизвестная ошибка")
-                } finally {'''
-          new = '''                    } else {
-                        message = "Не удалось сохранить файл: " + error
-                        android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
-                    }
-                } catch (cancelled: kotlinx.coroutines.CancellationException) {
-                    message = "Сохранение отменено. Проверьте состояние исходного файла перед повторной попыткой."
-                    android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
-                    throw cancelled
-                } catch (error: Exception) {
-                    message = "Не удалось сохранить файл: " + (error.message ?: "неизвестная ошибка")
-                    android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
-                } finally {'''
-          assert old in s
+          
+          old = """                    } else {
+                                  message = "Не удалось сохранить файл: " + error
+                              }
+                          } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                              message = "Сохранение отменено. Проверьте состояние исходного файла перед повторной попыткой."
+                              throw cancelled
+                          } catch (error: Exception) {
+                              message = "Не удалось сохранить файл: " + (error.message ?: "неизвестная ошибка")
+                          } finally {"""
+          new = """                    } else {
+                                  message = "Не удалось сохранить файл: " + error
+                                  android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                              }
+                          } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                              message = "Сохранение отменено. Проверьте состояние исходного файла перед повторной попыткой."
+                              android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                              throw cancelled
+                          } catch (error: Exception) {
+                              message = "Не удалось сохранить файл: " + (error.message ?: "неизвестная ошибка")
+                              android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                          } finally {"""
+          assert s.count(old) == 1
           s = s.replace(old, new, 1)
-
-          old = '''        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } }'''
-          new = '''        dismissButton = {
-            TextButton(enabled = !writingToFile, onClick = onDismiss) { Text("Отмена") }
-        }'''
-          assert old in s
+          
+          old = """        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } }"""
+          new = """        dismissButton = {
+                      TextButton(enabled = !writingToFile, onClick = onDismiss) { Text("Отмена") }
+                  }"""
+          assert s.count(old) == 1
           s = s.replace(old, new, 1)
-
+          
           assert s.count("TrackMetadataRepository.writeMetadataToFile(") == 1
           assert "message?.let { status ->" in s
           assert "if (writingToFile) return@TextButton" in s
-          assert "Toast.makeText(context, message" in s
+          assert s.count("Toast.makeText(context, message") == 3
+          assert "onDismissRequest = { if (!writingToFile) onDismiss() }" in s
           p.write_text(s, encoding="utf-8")
-          print("Metadata editor save feedback checks passed.")
+          print("Metadata editor save feedback verified: one save entry point, visible status, guarded duplicate clicks, protected dialog dismissal and explicit error notifications.")
           PY
 
       - name: Verify metadata save feedback
@@ -1932,8 +1933,11 @@ jobs:
           EDITOR=app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt
           grep -F 'message?.let { status ->' "$EDITOR"
           grep -F 'if (writingToFile) return@TextButton' "$EDITOR"
+          grep -F 'onDismissRequest = { if (!writingToFile) onDismiss() }' "$EDITOR"
           grep -F 'Toast.makeText(context, message' "$EDITOR"
           test "$(grep -c 'TrackMetadataRepository.writeMetadataToFile(' "$EDITOR")" -eq 1
+          test "$(grep -c 'Toast.makeText(context, message' "$EDITOR")" -eq 3
+
 
       - name: Verify metadata editor safety wiring
         run: |
