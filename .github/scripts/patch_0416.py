@@ -39,14 +39,11 @@ if "import androidx.compose.ui.res.painterResource" not in backdrop:
         "package com.chiyuri.player\n\nimport androidx.compose.ui.res.painterResource\n",
         1
     )
-old_art = """        if (image != null) {
-            Image(
-                bitmap = image.asImageBitmap(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().blur(1.dp).alpha(1f)
-            )
-        }"""
+# Replace the complete optional-artwork branch, independent of its previous blur/alpha values.
+art_pattern = re.compile(
+    r"        if \(image != null\) \{\n.*?\n        \}",
+    re.DOTALL
+)
 new_art = """        if (image != null) {
             Image(
                 bitmap = image.asImageBitmap(),
@@ -62,34 +59,9 @@ new_art = """        if (image != null) {
                 modifier = Modifier.fillMaxSize()
             )
         }"""
-if old_art not in backdrop:
-    # Source archive starts with 2.dp/0.38f; handle that exact original too.
-    old_art = """        if (image != null) {
-            Image(
-                bitmap = image.asImageBitmap(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().blur(2.dp).alpha(0.38f)
-            )
-        }"""
-    new_art = """        if (image != null) {
-            Image(
-                bitmap = image.asImageBitmap(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().blur(1.dp).alpha(1f)
-            )
-        } else {
-            Image(
-                painter = painterResource(id = R.drawable.chiyuri_background),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }"""
-if old_art not in backdrop:
-    raise SystemExit("Could not safely locate TrackArtworkBackdrop image branch")
-backdrop = backdrop.replace(old_art, new_art, 1)
+backdrop, art_count = art_pattern.subn(lambda _: new_art, backdrop, count=1)
+if art_count != 1:
+    raise SystemExit("Could not safely replace TrackArtworkBackdrop optional-artwork branch")
 backdrop_path.write_text(backdrop, encoding="utf-8")
 
 # Apply the spectrum to the actual bar drawing call in AudioVisualizer.kt.
