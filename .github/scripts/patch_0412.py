@@ -382,3 +382,230 @@ assert "bassBoostStrength" not in s and "mapsVolumeBoostToLoudnessEnhancerGain" 
 p.write_text(s, encoding="utf-8")
 
 print("ChiyuriPlayer 0.4.12 patch applied.")
+
+
+# 0.4.13: request actual Android write authorization before falling back to Save As.
+p = base / "TrackMetadataRepository.kt"
+s = p.read_text(encoding="utf-8")
+repo_imports = [
+    "import android.content.ContentUris",
+    "import android.os.Build",
+    "import android.provider.DocumentsContract",
+    "import android.provider.MediaStore",
+]
+for item in repo_imports:
+    if item not in s:
+        s = s.replace("import android.content.Context\n", "import android.content.Context\n" + item + "\n", 1)
+marker = "    fun suggestedCopyName(context: Context, uri: Uri): String {"
+repo_insert = r'''    /**
+     * Resolves a MediaStore-backed SAF audio document to its MediaStore item URI.
+     * Android 11+ requires MediaStore.createWriteRequest() for modifying shared media.
+     */
+    fun mediaStoreWriteUri(context: Context, uri: Uri): Uri? {
+        if (uri.authority == "media") return uri
+        if (!DocumentsContract.isDocumentUri(context, uri)) return null
+        val documentId = runCatching { DocumentsContract.getDocumentId(uri) }.getOrNull() ?: return null
+        if (!documentId.startsWith("audio:")) return null
+        val rowId = documentId.substringAfter(':').toLongOrNull() ?: return null
+        return ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, rowId)
+    }
+
+    fun isSameDocument(context: Context, first: Uri, second: Uri): Boolean {
+        if (first == second) return true
+        val firstMedia = mediaStoreWriteUri(context, first)
+        val secondMedia = mediaStoreWriteUri(context, second)
+        if (firstMedia != null && secondMedia != null) return firstMedia == secondMedia
+        if (first.authority != second.authority) return false
+        val firstId = runCatching { DocumentsContract.getDocumentId(first) }.getOrNull()
+        val secondId = runCatching { DocumentsContract.getDocumentId(second) }.getOrNull()
+        return firstId != null && firstId == secondId
+    }
+
+'''
+assert marker in s and "fun mediaStoreWriteUri(" not in s
+s = s.replace(marker, repo_insert + marker, 1)
+p.write_text(s, encoding="utf-8")
+
+p = base / "TrackDetailsComponents.kt"
+s = p.read_text(encoding="utf-8")
+imports = [
+    "import android.app.Activity",
+    "import android.content.Intent",
+    "import android.provider.MediaStore",
+    "import androidx.activity.result.IntentSenderRequest",
+    "import androidx.activity.result.contract.ActivityResultContract",
+]
+for item in imports:
+    if item not in s:
+        s = s.replace("import android.graphics.Bitmap\n", "import android.graphics.Bitmap\n" + item + "\n", 1)
+
+contract = r'''
+/**
+ * ACTION_OPEN_DOCUMENT normally asks only for read access through the stock contract.
+ * This contract explicitly requests both read and write grants for the selected audio file.
+ */
+internal class OpenDocumentWithWriteAccess : ActivityResultContract<Array<String>, Uri?>() {
+    override fun createIntent(context: android.content.Context, input: Array<String>): Intent =
+        Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = if (input.size == 1) input[0] else "*/*"
+            if (input.size > 1) putExtra(Intent.EXTRA_MIME_TYPES, input)
+            addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+            )
+        }
+
+    override fun parseResult(resultCode: Int, intent: Intent?): Uri? =
+        if (resultCode == Activity.RESULT_OK) intent?.data else null
+}
+
+'''
+anchor = "@Composable\ninternal fun TrackMetadataEditorDialog("
+assert anchor in s and "internal class OpenDocumentWithWriteAccess" not in s
+s = s.replace(anchor, contract + anchor, 1)
+
+old = '''    var pendingCopyMetadata by remember { mutableStateOf<TrackMetadata?>(null) }
+    val scope = rememberCoroutineScope()
+    val copyLauncher ='''
+new = '''    var pendingCopyMetadata by remember { mutableStateOf<TrackMetadata?>(null) }
+    var pendingWriteUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingWriteMetadata by remember { mutableStateOf<TrackMetadata?>(null) }
+    val scope = rememberCoroutineScope()
+
+    suspend fun saveToOriginal(targetUri: Uri, edited: TrackMetadata) {
+        try {
+            val error = TrackMetadataRepository.writeMetadataToFile(context, targetUri, edited)
+            if (error == null) {
+                TrackMetadataRepository.saveOverride(context, targetUri, edited)
+                uri?.let { originalUri ->
+                    if (originalUri != targetUri) TrackMetadataRepository.saveOverride(context, originalUri, edited)
+                }
+                onApply(edited)
+                message = "Метаданные записаны непосредственно в исходный файл и проверены."
+                Toast.makeText(context, "Изменения сохранены в исходном файле", Toast.LENGTH_LONG).show()
+            } else {
+                message = "Не удалось изменить исходный файл: $error"
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
+        } catch (error: Exception) {
+            message = "Не удалось изменить исходный файл: " + (error.message ?: "неизвестная ошибка")
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        } finally {
+            writingToFile = false
+        }
+    }
+
+    val mediaWriteLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        val target = pendingWriteUri
+        val edited = pendingWriteMetadata
+        pendingWriteUri = null
+        pendingWriteMetadata = null
+        if (result.resultCode == Activity.RESULT_OK && target != null && edited != null) {
+            scope.launch { saveToOriginal(target, edited) }
+        } else {
+            writingToFile = false
+            message = "Разрешение на изменение файла не выдано. Исходный файл не изменён; можно сохранить проверенную копию."
+        }
+    }
+
+    val documentWriteLauncher = rememberLauncherForActivityResult(
+        OpenDocumentWithWriteAccess()
+    ) { selectedUri ->
+        val edited = pendingWriteMetadata
+        pendingWriteMetadata = null
+        if (selectedUri == null || edited == null) {
+            writingToFile = false
+            message = "Выбор файла отменён. Исходный файл не изменён."
+        } else {
+            scope.launch {
+                try {
+                    val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    runCatching { context.contentResolver.takePersistableUriPermission(selectedUri, flags) }
+                    val originalUri = uri
+                    if (originalUri == null || !TrackMetadataRepository.isSameDocument(context, originalUri, selectedUri)) {
+                        message = "Выбран другой файл. Для безопасности перезапись отменена — выбери именно исходный аудиофайл."
+                        writingToFile = false
+                    } else if (!TrackMetadataRepository.hasWriteAccess(context, selectedUri)) {
+                        message = "Файловый провайдер не выдал право записи. Исходник не изменён; используй «Сохранить копию…»."
+                        writingToFile = false
+                    } else {
+                        saveToOriginal(selectedUri, edited)
+                    }
+                } catch (error: Exception) {
+                    message = "Не удалось получить доступ к файлу: " + (error.message ?: "неизвестная ошибка")
+                    writingToFile = false
+                }
+            }
+        }
+    }
+
+    val copyLauncher ='''
+assert old in s
+s = s.replace(old, new, 1)
+
+old = '''                    else
+                        "У приложения нет явного разрешения на перезапись этого файла. При сохранении будет предложено создать проверенную копию, не изменяя оригинал.",'''
+new = '''                    else
+                        "При сохранении Android запросит разрешение на изменение исходного файла. Если провайдер не поддерживает запись, можно сохранить проверенную копию.",'''
+assert old in s
+s = s.replace(old, new, 1)
+
+old = '''                                if (!TrackMetadataRepository.hasWriteAccess(context, targetUri)) {
+                                    message = "Нет разрешения на перезапись исходника. Подготавливаем копию…"
+                                    val prepared = TrackMetadataRepository.prepareMetadataCopy(context, targetUri, edited)
+                                    pendingCopyFile = prepared
+                                    pendingCopyMetadata = edited
+                                    copyLauncher.launch(TrackMetadataRepository.suggestedCopyName(context, targetUri))
+                                } else {
+                                    val error = TrackMetadataRepository.writeMetadataToFile(context, targetUri, edited)
+                                    if (error == null) {
+                                        TrackMetadataRepository.saveOverride(context, targetUri, edited)
+                                        onApply(edited)
+                                        message = "Метаданные записаны и проверены."
+                                        android.widget.Toast.makeText(context, "Изменения сохранены", android.widget.Toast.LENGTH_SHORT).show()
+                                        writingToFile = false
+                                    } else if (error.contains("Исходный файл восстановлен", ignoreCase = true)) {
+                                        message = "Перезапись не удалась, исходник восстановлен. Подготавливаем отдельную копию…"
+                                        val prepared = TrackMetadataRepository.prepareMetadataCopy(context, targetUri, edited)
+                                        pendingCopyFile = prepared
+                                        pendingCopyMetadata = edited
+                                        copyLauncher.launch(TrackMetadataRepository.suggestedCopyName(context, targetUri))
+                                    } else {
+                                        message = "Не удалось сохранить файл: " + error
+                                        android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                                        writingToFile = false
+                                    }
+                                }'''
+new = '''                                if (TrackMetadataRepository.hasWriteAccess(context, targetUri)) {
+                                    saveToOriginal(targetUri, edited)
+                                } else {
+                                    val mediaUri = TrackMetadataRepository.mediaStoreWriteUri(context, targetUri)
+                                    if (android.os.Build.VERSION.SDK_INT >= 30 && mediaUri != null) {
+                                        message = "Открой системное окно Android и разреши ChiyuriPlayer изменять этот аудиофайл…"
+                                        pendingWriteUri = mediaUri
+                                        pendingWriteMetadata = edited
+                                        val request = MediaStore.createWriteRequest(context.contentResolver, listOf(mediaUri))
+                                        mediaWriteLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+                                    } else {
+                                        message = "Выбери тот же исходный файл в системном окне и подтверди доступ на чтение и запись…"
+                                        pendingWriteMetadata = edited
+                                        documentWriteLauncher.launch(arrayOf("audio/*"))
+                                    }
+                                }'''
+assert old in s
+s = s.replace(old, new, 1)
+p.write_text(s, encoding="utf-8")
+
+p = base / "MainActivity.kt"
+s = p.read_text(encoding="utf-8")
+old = "val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->"
+new = "val audioPicker = rememberLauncherForActivityResult(OpenDocumentWithWriteAccess()) { uri ->"
+assert old in s
+s = s.replace(old, new, 1)
+p.write_text(s, encoding="utf-8")
+
+print("ChiyuriPlayer 0.4.13 write-permission flow applied.")
