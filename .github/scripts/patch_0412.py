@@ -1,5 +1,5 @@
 from pathlib import Path
-base = Path("src/main/java/com/chiyuri/player")
+base = Path("app/src/main/java/com/chiyuri/player")
 
 p = base / "AudioEffectsSettings.kt"
 s = p.read_text(encoding="utf-8")
@@ -356,7 +356,7 @@ assert old in s, "Audio picker URI grant block not found"
 s = s.replace(old, new, 1)
 p.write_text(s, encoding="utf-8")
 
-p = Path("src/test/java/com/chiyuri/player/PlaceholderTest.kt")
+p = Path("app/src/test/java/com/chiyuri/player/PlaceholderTest.kt")
 s = p.read_text(encoding="utf-8")
 s = s.replace("fun clampsEqualizerBassAndVolumeValues()", "fun clampsEqualizerAndVolumeValues()")
 s = s.replace("                bassBoostStrength = 1200f,\n", "")
