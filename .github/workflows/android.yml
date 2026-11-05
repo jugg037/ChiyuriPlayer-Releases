@@ -8,6 +8,7 @@ on:
       - ".github/scripts/patch_0412.py"
       - ".github/scripts/patch_0414.py"
       - ".github/scripts/patch_0415.py"
+      - ".github/scripts/patch_0416.py"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
       - ".github/assets/chiyuri_background.webp.b64"
@@ -25,8 +26,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.15"
-      APP_VERSION_CODE: "325"
+      APP_VERSION_NAME: "0.4.16"
+      APP_VERSION_CODE: "326"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2010,6 +2011,20 @@ jobs:
       - name: Apply opacity and background update 0.4.15
         run: python3 .github/scripts/patch_0415.py
 
+      - name: Apply visual refinement update 0.4.16
+        run: python3 .github/scripts/patch_0416.py
+
+      - name: Verify visual refinement update 0.4.16
+        run: |
+          set -eu
+          MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
+          BACKDROP=app/src/main/java/com/chiyuri/player/TrackArtworkBackdrop.kt
+          grep -F 'if (expanded) 0.0f else 0.70f' "$MAIN"
+          grep -F 'adaptiveBackground.copy(alpha = 0.05f)' "$MAIN"
+          grep -F '.blur(1.dp)' "$BACKDROP"
+          ! grep -F 'window.setBackgroundDrawableResource(R.drawable.chiyuri_background)' "$MAIN"
+          grep -R -l 'ChiyuriSpectrum' app/src/main/java/com/chiyuri/player/*Visualizer*.kt app/src/main/java/com/chiyuri/player/*visualizer*.kt
+          echo "0.4.16 visual refinement markers verified."
       - name: Verify interface and background update 0.4.15
         run: |
           set -eu
@@ -2165,9 +2180,9 @@ jobs:
           tag_name: v${{ env.APP_VERSION_NAME }}
           name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
           body: |
-            Основной фон приложения обновлён: используется предоставленное изображение, а при наличии обложки текущего трека она временно заменяет фон. При отсутствии обложки возвращается пользовательское изображение.
-            Цветовая палитра интерфейса автоматически адаптируется к активному изображению; размытие фоновой обложки — 2 dp.
-            Исправлены значения непрозрачности: свёрнутый мини-плеер — 50%, развёрнутый мини-плеер — 5%, основные поверхности интерфейса — 5%.
+            Обновлены прозрачность мини-плеера и фоновых поверхностей: свёрнутый мини-плеер — 70%, развёрнутый — 0%, основные поверхности — 5%.
+            Размытие фонового изображения уменьшено до 1 dp. Исправлено масштабирование основного фона с сохранением пропорций.
+            Обложка активного трека полностью заменяет основной фон на время воспроизведения. Аудиовизуализатор использует цветовой спектр.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
