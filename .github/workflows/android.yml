@@ -26,8 +26,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.16"
-      APP_VERSION_CODE: "326"
+      APP_VERSION_NAME: "0.4.17"
+      APP_VERSION_CODE: "327"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2011,10 +2011,10 @@ jobs:
       - name: Apply opacity and background update 0.4.15
         run: python3 .github/scripts/patch_0415.py
 
-      - name: Apply visual refinement update 0.4.16
+      - name: Apply visual refinement update 0.4.17
         run: python3 .github/scripts/patch_0416.py
 
-      - name: Verify visual refinement update 0.4.16
+      - name: Verify visual refinement update 0.4.17
         run: |
           set -eu
           MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
@@ -2028,7 +2028,7 @@ jobs:
           test -s "$VISUALIZER"
           grep -F 'painterResource(id = R.drawable.chiyuri_background)' "$BACKDROP"
           grep -F 'brush = ChiyuriSpectrum' "$VISUALIZER"
-          echo "0.4.16 visual refinement markers verified: Compose fallback image and rainbow bars are wired."
+          echo "0.4.17 visual refinement markers verified: Compose fallback image and rainbow bars are wired."
 
       - name: Verify embedded background asset from 0.4.15
         run: |
