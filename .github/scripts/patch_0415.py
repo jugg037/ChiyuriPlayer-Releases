@@ -34,15 +34,11 @@ drawable.mkdir(parents=True, exist_ok=True)
 image_target = drawable / "chiyuri_background.webp"
 image_target.write_bytes(image_source.read_bytes())
 
-# Install it as the window background. Track artwork is rendered above it
-# when present; when artwork is absent, this persistent image remains visible.
-xml_dir = Path("app/src/main/res/drawable")
-xml_dir.mkdir(parents=True, exist_ok=True)
-(xml_dir / "chiyuri_background.xml").write_text(
-    '<bitmap xmlns:android="http://schemas.android.com/apk/res/android" '
-    'android:src="@drawable/chiyuri_background" android:gravity="fill" />\n',
-    encoding="utf-8"
-)
+# The WebP drawable itself is a valid Android drawable. Remove any
+# XML alias with the same resource name to avoid a resource self-reference.
+xml_alias = Path("app/src/main/res/drawable/chiyuri_background.xml")
+if xml_alias.exists():
+    xml_alias.unlink()
 marker = "super.onCreate(savedInstanceState)"
 if marker not in s:
     raise SystemExit("MainActivity onCreate insertion point not found")
