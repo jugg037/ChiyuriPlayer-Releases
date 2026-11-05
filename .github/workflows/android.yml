@@ -19,8 +19,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.10"
-      APP_VERSION_CODE: "320"
+      APP_VERSION_NAME: "0.4.11"
+      APP_VERSION_CODE: "321"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -1677,7 +1677,56 @@ jobs:
           source = repository.read_text(encoding="utf-8")
           start = source.index("    suspend fun writeMetadataToFile(")
           end = source.index("\n    /** Backward-compatible entry point", start)
-          method = r'''    suspend fun writeMetadataToFile(context: Context, uri: Uri, metadata: TrackMetadata): String? =
+          method = r'''    private fun writeFileWithFallback(context: Context, uri: Uri, source: java.io.File) {
+              val failures = mutableListOf<String>()
+              fun copyAndVerify(output: java.io.OutputStream) {
+                  output.use { stream ->
+                      source.inputStream().use { input -> input.copyTo(stream) }
+                      stream.flush()
+                      if (stream is java.io.FileOutputStream) stream.fd.sync()
+                  }
+                  if (!contentMatches(context, uri, source)) {
+                      throw java.io.IOException("Записанные байты не совпадают с исходной копией.")
+                  }
+              }
+              for (mode in listOf("rwt", "w")) {
+                  try {
+                      val stream = context.contentResolver.openOutputStream(uri, mode)
+                          ?: throw java.io.IOException("openOutputStream($mode) вернул null.")
+                      copyAndVerify(stream)
+                      return
+                  } catch (error: Exception) {
+                      failures += "openOutputStream($mode): ${error.javaClass.simpleName}: ${error.message}"
+                  }
+              }
+              for (mode in listOf("rwt", "wt")) {
+                  try {
+                      val descriptor = context.contentResolver.openFileDescriptor(uri, mode)
+                          ?: throw java.io.IOException("openFileDescriptor($mode) вернул null.")
+                      copyAndVerify(android.os.ParcelFileDescriptor.AutoCloseOutputStream(descriptor))
+                      return
+                  } catch (error: Exception) {
+                      failures += "openFileDescriptor($mode): ${error.javaClass.simpleName}: ${error.message}"
+                  }
+              }
+              throw java.io.IOException("Все способы записи/проверки не удались: " + failures.joinToString(" | "))
+          }
+
+          private fun describeMetadataFailure(error: Throwable): String {
+              val chain = mutableListOf<String>()
+              var current: Throwable? = error
+              val seen = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Throwable, Boolean>())
+              while (current != null && seen.add(current) && chain.size < 8) {
+                  chain += current.javaClass.simpleName + ": " + (current.message ?: "без подробностей")
+                  current = current.cause
+              }
+              error.suppressed.forEach { suppressed ->
+                  chain += "suppressed " + suppressed.javaClass.simpleName + ": " + (suppressed.message ?: "без подробностей")
+              }
+              return chain.joinToString(" -> ")
+          }
+
+          suspend fun writeMetadataToFile(context: Context, uri: Uri, metadata: TrackMetadata): String? =
           kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
               val mime = runCatching { context.contentResolver.getType(uri).orEmpty().lowercase() }.getOrDefault("")
               val displayFileName = runCatching {
@@ -1732,34 +1781,18 @@ jobs:
                   }
 
                   try {
-                      val destination = openTruncatingOutputStream(context, uri)
-                          ?: throw java.io.IOException("Поставщик файлов не разрешил запись.")
-                      destination.use { output ->
-                          rewrittenFile.inputStream().use { inputStream -> inputStream.copyTo(output) }
-                          output.flush()
-                          if (output is java.io.FileOutputStream) output.fd.sync()
-                      }
-                      require(contentMatches(context, uri, rewrittenFile)) {
-                          "Проверка записанного файла не пройдена: содержимое отличается от подготовленной версии."
-                      }
+                      writeFileWithFallback(context, uri, rewrittenFile)
                   } catch (writeError: Exception) {
                       var restored = false
+                      val restoreFailures = mutableListOf<String>()
                       for (attempt in 1..2) {
                           try {
-                              val restoreStream = openTruncatingOutputStream(context, uri)
-                                  ?: throw java.io.IOException("Поставщик файлов не разрешил восстановление.")
-                              restoreStream.use { output ->
-                                  originalFile.inputStream().use { inputStream -> inputStream.copyTo(output) }
-                                  output.flush()
-                                  if (output is java.io.FileOutputStream) output.fd.sync()
-                              }
-                              if (!contentMatches(context, uri, originalFile)) {
-                                  throw java.io.IOException("Проверка восстановленного файла не пройдена.")
-                              }
+                              writeFileWithFallback(context, uri, originalFile)
                               restored = true
                               break
-                          } catch (_: Exception) {
-                              // Retry once; keep the original backup if both attempts fail.
+                          } catch (restoreError: Exception) {
+                              // Keep each provider/mode failure for the final diagnostic; retry once.
+                              restoreFailures += "attempt " + attempt + ": " + describeMetadataFailure(restoreError)
                           }
                       }
 
@@ -1786,7 +1819,8 @@ jobs:
                           }
                           throw java.io.IOException(
                               "Запись и автоматическое восстановление не удались. Резервная копия исходного файла сохранена: " +
-                                  recovery.absolutePath + ". Не изменяйте оригинал до восстановления.",
+                                  recovery.absolutePath + ". Не изменяйте оригинал до восстановления. Ошибка записи: " +
+                                  describeMetadataFailure(writeError) + ". Ошибки восстановления: " + restoreFailures.joinToString(" || "),
                               writeError
                           )
                       }
@@ -1799,7 +1833,7 @@ jobs:
               } catch (cancelled: kotlinx.coroutines.CancellationException) {
                   throw cancelled
               } catch (error: Exception) {
-                  val detail = error.message?.takeIf { it.isNotBlank() } ?: "Неизвестная ошибка."
+                  val detail = describeMetadataFailure(error)
                   "Не удалось записать метаданные: " + detail
               } finally {
                   if (!preserveTempBackup) original?.delete()
