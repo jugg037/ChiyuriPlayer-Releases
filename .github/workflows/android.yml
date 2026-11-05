@@ -2026,8 +2026,9 @@ jobs:
           grep -F 'window.setBackgroundDrawableResource(R.drawable.chiyuri_background)' "$MAIN"
           test -s app/src/main/res/drawable-nodpi/chiyuri_background.webp
           test -s "$VISUALIZER"
-          grep -F 'ChiyuriSpectrum' "$VISUALIZER"
-          echo "0.4.16 visual refinement markers verified."
+          grep -F 'painterResource(id = R.drawable.chiyuri_background)' "$BACKDROP"
+          grep -F 'brush = ChiyuriSpectrum' "$VISUALIZER"
+          echo "0.4.16 visual refinement markers verified: Compose fallback image and rainbow bars are wired."
 
       - name: Verify embedded background asset from 0.4.15
         run: |
