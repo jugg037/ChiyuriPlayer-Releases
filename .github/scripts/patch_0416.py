@@ -17,11 +17,14 @@ for old, new in alpha_changes:
 if "if (expanded) 0.0f else 0.70f" not in main:
     raise SystemExit("Could not safely locate mini-player alpha expression in MainActivity.kt")
 
-# Remove the window-level drawable: Android stretches window backgrounds to the
-# entire window. The Compose backdrop owns image sizing and uses aspect-preserving scale.
-main = main.replace(
-    "        window.setBackgroundDrawableResource(R.drawable.chiyuri_background)\n", ""
-)
+# Keep the embedded image as the guaranteed fallback when no track artwork exists.
+# Track artwork is rendered by the Compose backdrop above it when available.
+window_marker = "super.onCreate(savedInstanceState)"
+window_line = "window.setBackgroundDrawableResource(R.drawable.chiyuri_background)"
+if window_marker not in main:
+    raise SystemExit("MainActivity onCreate insertion point not found for fallback background")
+if window_line not in main:
+    main = main.replace(window_marker, window_marker + "\\n        " + window_line, 1)
 main_path.write_text(main, encoding="utf-8")
 
 backdrop_path = ROOT / "TrackArtworkBackdrop.kt"
@@ -82,5 +85,5 @@ if not candidates:
 
 assert "if (expanded) 0.0f else 0.70f" in main_path.read_text(encoding="utf-8")
 assert ".blur(1.dp)" in backdrop_path.read_text(encoding="utf-8")
-assert "window.setBackgroundDrawableResource(R.drawable.chiyuri_background)" not in main_path.read_text(encoding="utf-8")
-print("0.4.16 requested opacity and 1.dp blur applied; removed stretched window background. Visualizer files found: " + ", ".join(p.name for p in changed))
+assert "window.setBackgroundDrawableResource(R.drawable.chiyuri_background)" in main_path.read_text(encoding="utf-8")
+print("0.4.16 requested opacity and 1.dp blur applied; embedded fallback window background retained. Visualizer files found: " + ", ".join(p.name for p in changed))
