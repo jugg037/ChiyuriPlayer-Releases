@@ -25,7 +25,6 @@ p.write_text(s, encoding="utf-8")
 p = base / "AudioEffectsController.kt"
 s = p.read_text(encoding="utf-8")
 s = s.replace("import android.media.audiofx.BassBoost\n", "")
-s = s.replace("import kotlin.math.roundToInt\n", "")
 s = s.replace("    private var bassBoost: BassBoost? = null\n", "")
 s = s.replace("        bassBoost = runCatching { BassBoost(0, audioSessionId) }.getOrNull()\n", "")
 s = s.replace("(2000f * kotlin.math.log10(config.playerVolume)).roundToInt().coerceIn(0, 602)", "volumeBoostToMillibels(config.playerVolume)")
