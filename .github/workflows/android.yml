@@ -20,8 +20,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.12"
-      APP_VERSION_CODE: "322"
+      APP_VERSION_NAME: "0.4.13"
+      APP_VERSION_CODE: "323"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2022,7 +2022,13 @@ jobs:
           grep -F 'coerceAtMost(3f)' "$MAIN"
           grep -F 'boostPercent / 200f' "$VOLUME"
           grep -F 'mapsVolumeBoostToLoudnessEnhancerGain' "$TESTS"
-          echo "Metadata write access and verified Save As fallback wired; BassBoost removed; extra volume range is +200%."
+          grep -F 'MediaStore.createWriteRequest(context.contentResolver, listOf(mediaUri))' "$EDITOR"
+          grep -F 'StartIntentSenderForResult()' "$EDITOR"
+          grep -F 'OpenDocumentWithWriteAccess()' "$MAIN"
+          grep -F 'FLAG_GRANT_WRITE_URI_PERMISSION' "$EDITOR"
+          grep -F 'fun mediaStoreWriteUri(' "$REPO"
+          grep -F 'fun isSameDocument(' "$REPO"
+          echo "Android write authorization is requested for MediaStore items and SAF documents before overwriting; verified Save As remains available. BassBoost removed; extra volume range is +200%."
 
       - name: Verify update cancellation wiring
         run: |
@@ -2138,7 +2144,7 @@ jobs:
             Улучшена отмена загрузки обновления: при отмене закрываются активные потоки чтения и записи, разрывается HTTP-соединение и удаляется частичный APK.
             Отмена также очищает APK, если прерывание произошло во время проверки SHA-256 или сертификата подписи.
             Загрузка остаётся фоновой при переключении вкладок; прогресс и команда отмены доступны в Центре обновлений и системном уведомлении.
-            Редактор метаданных проверяет разрешение на перезапись, корректно сохраняет URI grant и предлагает сохранить проверенную копию, если исходный файл доступен только для чтения. Удалено отдельное усиление басов; дополнительное усиление громкости плеера расширено до +200% и работает через LoudnessEnhancer независимо от эквалайзера.
+            Редактор метаданных теперь запрашивает системное разрешение Android на изменение выбранного аудиофайла в общей памяти (MediaStore) или повторно открывает исходный документ с правами чтения и записи. После подтверждения выполняется перезапись исходника с проверкой; если провайдер не выдаёт право записи, остаётся безопасное сохранение проверенной копии. Удалено отдельное усиление басов; дополнительное усиление громкости плеера расширено до +200% и работает через LoudnessEnhancer независимо от эквалайзера.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
