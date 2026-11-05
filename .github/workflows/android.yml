@@ -2023,7 +2023,8 @@ jobs:
           grep -F 'if (expanded) 0.0f else 0.70f' "$MAIN"
           grep -F 'adaptiveBackground.copy(alpha = 0.05f)' "$MAIN"
           grep -F '.blur(1.dp)' "$BACKDROP"
-          ! grep -F 'window.setBackgroundDrawableResource(R.drawable.chiyuri_background)' "$MAIN"
+          grep -F 'window.setBackgroundDrawableResource(R.drawable.chiyuri_background)' "$MAIN"
+          test -s app/src/main/res/drawable-nodpi/chiyuri_background.webp
           test -s "$VISUALIZER"
           grep -F 'ChiyuriSpectrum' "$VISUALIZER"
           echo "0.4.16 visual refinement markers verified."
