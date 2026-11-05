@@ -214,7 +214,8 @@ new = '''    var message by remember { mutableStateOf<String?>(null) }
 assert old in s and "pendingCopyFile" not in s
 s = s.replace(old, new, 1)
 old = '''                Text("Найди сведения в интернете, затем проверь и отредактируй их перед сохранением.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                OutlinedTextField(title,'''\nnew = '''                Text("Найди сведения в интернете, затем проверь и отредактируй их перед сохранением.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                OutlinedTextField(title,'''
+new = '''                Text("Найди сведения в интернете, затем проверь и отредактируй их перед сохранением.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 Text(
                     if (uri != null && TrackMetadataRepository.hasWriteAccess(context, uri))
                         "Разрешение на перезапись файла обнаружено. После записи будет выполнена проверка содержимого."
@@ -223,7 +224,8 @@ old = '''                Text("Найди сведения в интернете
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
-                OutlinedTextField(title,'''\nassert old in s
+                OutlinedTextField(title,'''
+assert old in s
 s = s.replace(old, new, 1)
 start = s.index("        confirmButton = {", s.index("internal fun TrackMetadataEditorDialog"))
 end = s.index("        dismissButton = {", start)
