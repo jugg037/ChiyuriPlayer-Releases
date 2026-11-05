@@ -436,7 +436,7 @@ imports = [
     "import androidx.activity.result.contract.ActivityResultContract",
 ]
 for item in imports:
-    if item not in s:
+    if item not in s.splitlines():
         s = s.replace("import android.graphics.Bitmap\n", "import android.graphics.Bitmap\n" + item + "\n", 1)
 
 contract = r'''
