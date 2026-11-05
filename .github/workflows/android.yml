@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/android.yml"
       - ".github/scripts/patch_0412.py"
+      - ".github/scripts/patch_0414.py"
       - "ChiyuriPlayer-0.2.0-source-prep.zip"
   workflow_dispatch:
 
@@ -20,8 +21,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.13"
-      APP_VERSION_CODE: "323"
+      APP_VERSION_NAME: "0.4.14"
+      APP_VERSION_CODE: "324"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -1999,6 +2000,26 @@ jobs:
       - name: Apply metadata permission and audio control fixes
         run: python3 .github/scripts/patch_0412.py
 
+      - name: Apply dynamic interface update 0.4.14
+        run: python3 .github/scripts/patch_0414.py
+
+      - name: Verify dynamic interface update 0.4.14
+        run: |
+          set -eu
+          MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
+          GOTHIC=app/src/main/java/com/chiyuri/player/GothicUi.kt
+          BACKDROP=app/src/main/java/com/chiyuri/player/TrackArtworkBackdrop.kt
+          ! grep -F '"Текст" -> LyricsScreen' "$MAIN"
+          ! grep -F 'listOf("Музыка", "Видео", "Плейлисты", "Текст", "Ещё")' "$MAIN"
+          grep -F 'if (expanded) 1f else 0.25f' "$MAIN"
+          grep -F 'surface.copy(alpha = 0.90f)' "$MAIN"
+          grep -F 'primary = adaptiveAccent' "$MAIN"
+          grep -F 'secondary = adaptiveSecondary' "$MAIN"
+          grep -F 'MaterialTheme.colorScheme.primary' "$GOTHIC"
+          grep -F 'MaterialTheme.colorScheme.secondary' "$GOTHIC"
+          grep -F '.blur(2.dp)' "$BACKDROP"
+          echo "Lyrics tab removed; mini-player transparency and artwork-driven palette verified; backdrop blur is 2.dp."
+
       - name: Verify metadata permission and audio control fixes
         run: |
           set -eu
@@ -2145,6 +2166,7 @@ jobs:
             Отмена также очищает APK, если прерывание произошло во время проверки SHA-256 или сертификата подписи.
             Загрузка остаётся фоновой при переключении вкладок; прогресс и команда отмены доступны в Центре обновлений и системном уведомлении.
             Редактор метаданных теперь запрашивает системное разрешение Android на изменение выбранного аудиофайла в общей памяти (MediaStore) или повторно открывает исходный документ с правами чтения и записи. После подтверждения выполняется перезапись исходника с проверкой; если провайдер не выдаёт право записи, остаётся безопасное сохранение проверенной копии. Удалено отдельное усиление басов; дополнительное усиление громкости плеера расширено до +200% и работает через LoudnessEnhancer независимо от эквалайзера.
+            Удалена отдельная вкладка «Текст»; тексты по-прежнему доступны в редакторе метаданных и развёрнутом мини-плеере. Цвета интерфейса автоматически подстраиваются под палитру обложки трека, элементы оформления переведены на динамическую палитру. Непрозрачность основных поверхностей — 90%, свёрнутого мини-плеера — 25%, развёрнутого — 100%. Размытие фоновой обложки — 2 dp.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
