@@ -19,8 +19,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.11"
-      APP_VERSION_CODE: "321"
+      APP_VERSION_NAME: "0.4.12"
+      APP_VERSION_CODE: "322"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -1995,6 +1995,34 @@ jobs:
           test "$(grep -c 'TrackMetadataRepository.writeMetadataToFile(' "$EDITOR")" -eq 1
           echo "Metadata save has one UI entry point, verified backup and recovery path."
 
+      - name: Apply metadata permission and audio control fixes
+        run: python3 .github/scripts/patch_0412.py
+
+      - name: Verify metadata permission and audio control fixes
+        run: |
+          set -eu
+          REPO=app/src/main/java/com/chiyuri/player/TrackMetadataRepository.kt
+          EDITOR=app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt
+          AUDIO=app/src/main/java/com/chiyuri/player/AudioEffectsController.kt
+          SETTINGS=app/src/main/java/com/chiyuri/player/AudioEffectsSettings.kt
+          MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
+          VOLUME=app/src/main/java/com/chiyuri/player/VolumeIndicator.kt
+          TESTS=app/src/test/java/com/chiyuri/player/PlaceholderTest.kt
+          grep -F 'fun hasWriteAccess' "$REPO"
+          grep -F 'fun prepareMetadataCopy' "$REPO"
+          grep -F 'fun writePreparedCopy' "$REPO"
+          grep -F 'CreateDocument("audio/*")' "$EDITOR"
+          grep -F 'Сохранить копию…' "$EDITOR"
+          grep -F 'FLAG_GRANT_READ_URI_PERMISSION or' "$MAIN"
+          ! grep -R -E 'BassBoost|bassBoostStrength|KEY_BASS_STRENGTH|Усиление басов' app/src/main/java/com/chiyuri/player
+          grep -F 'volumeBoostToMillibels(config.playerVolume)' "$AUDIO"
+          grep -F 'coerceIn(0, 954)' "$SETTINGS"
+          grep -F 'valueRange = 0f..2f' "$MAIN"
+          grep -F 'coerceAtMost(3f)' "$MAIN"
+          grep -F 'boostPercent / 200f' "$VOLUME"
+          grep -F 'mapsVolumeBoostToLoudnessEnhancerGain' "$TESTS"
+          echo "Metadata write access and verified Save As fallback wired; BassBoost removed; extra volume range is +200%."
+
       - name: Verify update cancellation wiring
         run: |
           set -eu
@@ -2109,7 +2137,7 @@ jobs:
             Улучшена отмена загрузки обновления: при отмене закрываются активные потоки чтения и записи, разрывается HTTP-соединение и удаляется частичный APK.
             Отмена также очищает APK, если прерывание произошло во время проверки SHA-256 или сертификата подписи.
             Загрузка остаётся фоновой при переключении вкладок; прогресс и команда отмены доступны в Центре обновлений и системном уведомлении.
-            Сохранены оформление системных кнопок воспроизведения и совместимость записи метаданных с SAF-провайдерами, не поддерживающими режим rwt.
+            Редактор метаданных проверяет разрешение на перезапись, корректно сохраняет URI grant и предлагает сохранить проверенную копию, если исходный файл доступен только для чтения. Удалено отдельное усиление басов; дополнительное усиление громкости плеера расширено до +200% и работает через LoudnessEnhancer независимо от эквалайзера.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
