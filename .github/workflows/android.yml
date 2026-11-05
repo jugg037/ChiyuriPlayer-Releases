@@ -2019,25 +2019,20 @@ jobs:
           set -eu
           MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
           BACKDROP=app/src/main/java/com/chiyuri/player/TrackArtworkBackdrop.kt
+          VISUALIZER=app/src/main/java/com/chiyuri/player/AudioVisualizer.kt
           grep -F 'if (expanded) 0.0f else 0.70f' "$MAIN"
           grep -F 'adaptiveBackground.copy(alpha = 0.05f)' "$MAIN"
           grep -F '.blur(1.dp)' "$BACKDROP"
           ! grep -F 'window.setBackgroundDrawableResource(R.drawable.chiyuri_background)' "$MAIN"
-          grep -R -l 'ChiyuriSpectrum' app/src/main/java/com/chiyuri/player/*Visualizer*.kt app/src/main/java/com/chiyuri/player/*visualizer*.kt
+          test -s "$VISUALIZER"
+          grep -F 'ChiyuriSpectrum' "$VISUALIZER"
           echo "0.4.16 visual refinement markers verified."
-      - name: Verify interface and background update 0.4.15
+
+      - name: Verify embedded background asset from 0.4.15
         run: |
           set -eu
-          MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
-          BACKDROP=app/src/main/java/com/chiyuri/player/TrackArtworkBackdrop.kt
           test -s app/src/main/res/drawable-nodpi/chiyuri_background.webp
-          grep -F 'if (expanded) 0.05f else 0.50f' "$MAIN"
-          grep -F 'adaptiveBackground.copy(alpha = 0.05f)' "$MAIN"
-          grep -F 'adaptiveSurface.copy(alpha = 0.05f)' "$MAIN"
-          grep -F 'window.setBackgroundDrawableResource(R.drawable.chiyuri_background)' "$MAIN"
-          grep -F '.blur(2.dp)' "$BACKDROP"
-          echo "0.4.15 opacity and embedded background resource verified."
-
+          echo "Embedded fallback background image is present."
       - name: Verify metadata permission and audio control fixes
         run: |
           set -eu
