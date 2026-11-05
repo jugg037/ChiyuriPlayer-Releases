@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
     paths:
       - ".github/workflows/android.yml"
+      - ".github/scripts/patch_0412.py"
       - "ChiyuriPlayer-0.2.0-source-prep.zip"
   workflow_dispatch:
 
