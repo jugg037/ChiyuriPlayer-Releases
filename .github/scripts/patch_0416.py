@@ -24,7 +24,7 @@ window_line = "window.setBackgroundDrawableResource(R.drawable.chiyuri_backgroun
 if window_marker not in main:
     raise SystemExit("MainActivity onCreate insertion point not found for fallback background")
 if window_line not in main:
-    main = main.replace(window_marker, window_marker + "\\n        " + window_line, 1)
+    main = main.replace(window_marker, window_marker + "\n        " + window_line, 1)
 main_path.write_text(main, encoding="utf-8")
 
 backdrop_path = ROOT / "TrackArtworkBackdrop.kt"
@@ -35,8 +35,9 @@ backdrop = backdrop.replace(".blur(2.dp)", ".blur(1.dp)")
 # Activity window background alone is hidden by Compose's full-screen content.
 if "import androidx.compose.ui.res.painterResource" not in backdrop:
     backdrop = backdrop.replace(
-        "import androidx.compose.ui.platform.LocalContext\n",
-        "import androidx.compose.ui.platform.LocalContext\nimport androidx.compose.ui.res.painterResource\n"
+        "package com.chiyuri.player\n",
+        "package com.chiyuri.player\n\nimport androidx.compose.ui.res.painterResource\n",
+        1
     )
 old_art = """        if (image != null) {
             Image(
@@ -95,8 +96,11 @@ backdrop_path.write_text(backdrop, encoding="utf-8")
 visualizer_path = ROOT / "AudioVisualizer.kt"
 src = visualizer_path.read_text(encoding="utf-8")
 if "import androidx.compose.ui.graphics.Brush" not in src:
-    src = src.replace("import androidx.compose.ui.graphics.drawscope.Stroke\n",
-                      "import androidx.compose.ui.graphics.drawscope.Stroke\nimport androidx.compose.ui.graphics.Brush\n")
+    src = src.replace(
+        "package com.chiyuri.player\n",
+        "package com.chiyuri.player\n\nimport androidx.compose.ui.graphics.Brush\n",
+        1
+    )
 declaration = """private val ChiyuriSpectrum = Brush.horizontalGradient(
     colors = listOf(
         androidx.compose.ui.graphics.Color(0xFFFF1744),
