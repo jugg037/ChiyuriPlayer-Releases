@@ -424,6 +424,7 @@ test_dir = Path("app/src/test/java/com/chiyuri/player")
 (test_dir / "ArtworkDecoderTest.kt").write_text("""package com.chiyuri.player
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ArtworkDecoderTest {
