@@ -213,6 +213,7 @@ replace_once(details,
                 ?.let(::downloadArtworkPreview)
             bytes?.let(::decodeArtworkBitmap)""",
     "bounded metadata editor artwork preview")
+source = details.read_text(encoding="utf-8")
 helper = """private fun downloadArtworkPreview(address: String): ByteArray? {
     val connection = URL(address).openConnection() as java.net.HttpURLConnection
     return try {
