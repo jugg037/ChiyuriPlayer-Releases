@@ -2095,6 +2095,8 @@ jobs:
           grep -F 'catch (cancelled: CancellationException)' "$LYRICS"
           grep -F 'fun install(context: Context, apk: File): String' "$UPDATES"
           grep -F 'throw cancelled' "$UPDATES"
+          grep -F 'checkSelfPermission(' "$UPDATES"
+          grep -F 'POST_NOTIFICATIONS' "$UPDATES"
           grep -F 'orElse("330")' app/build.gradle.kts
           test -s app/src/test/java/com/chiyuri/player/ArtworkDecoderTest.kt
           echo "0.4.20 bounded artwork, safe installer, queue restore, lyric cache and Gradle fallback verified."
