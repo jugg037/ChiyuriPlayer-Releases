@@ -2165,6 +2165,7 @@ jobs:
             .github/scripts
             .github/workflows/android.yml
             ChiyuriPlayer-0.2.0-source-prep.zip
+            ChiyuriPlayer-0.2.0-source-prep.zip
           if-no-files-found: warn
           retention-days: 3
 
