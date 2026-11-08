@@ -305,7 +305,7 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 import java.io.ByteArrayInputStream
 
-class M3uPlaylistCodecTest {
+class M3uPlaylistLimitsTest {
     @Test fun readsUtf8PlaylistWithinLimit() {
         val content = "#EXTM3U\\n#EXTINF:120,Track\\ncontent://media/1\\n"
         assertEquals(content, M3uPlaylistCodec.read(ByteArrayInputStream(content.toByteArray(Charsets.UTF_8))))
