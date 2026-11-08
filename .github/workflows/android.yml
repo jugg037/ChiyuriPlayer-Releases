@@ -2164,6 +2164,7 @@ jobs:
             app/build.gradle.kts
             .github/scripts
             .github/workflows/android.yml
+            ChiyuriPlayer-0.2.0-source-prep.zip
           if-no-files-found: warn
           retention-days: 3
 
@@ -2198,8 +2199,8 @@ jobs:
           echo "$ANDROID_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/chiyuri-signing/release.jks"
           test -s "$RUNNER_TEMP/chiyuri-signing/release.jks"
 
-      - name: Run unit tests
-        run: gradle testDebugUnitTest -PVERSION_CODE=${APP_VERSION_CODE}
+      - name: Run unit tests and Android lint
+        run: gradle testDebugUnitTest lintRelease -PVERSION_CODE=${APP_VERSION_CODE}
 
       - name: Build signed release APK
         env:
@@ -2219,7 +2220,7 @@ jobs:
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
           BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
-          printf '%s\n' "$BADGING" | grep -F "versionCode='$APP_VERSION_CODE' versionName='$APP_VERSION_NAME'" >/dev/null || {
+          printf '%s\n' "$BADGING" | grep -F "package: name='com.chiyuri.player' versionCode='$APP_VERSION_CODE' versionName='$APP_VERSION_NAME'" >/dev/null || {
             echo "::error::APK manifest version does not match the single Gradle release version."
             printf '%s\n' "$BADGING" | grep "^package:"
             exit 1
