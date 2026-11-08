@@ -585,7 +585,7 @@ replace_once(ROOT / "PlaybackService.kt",
 
 replace_once(ROOT / "MainActivity.kt",
     "    override fun dispatchKeyEvent(event: KeyEvent): Boolean {",
-    "    @android.annotation.SuppressLint(\"RestrictedApi\")\n    override fun dispatchKeyEvent(event: KeyEvent): Boolean {",
+    '    @android.annotation.SuppressLint("RestrictedApi")' + chr(10) + '    override fun dispatchKeyEvent(event: KeyEvent): Boolean {',
     "volume key event restricted API suppression")
 
 # Android 13+ requires an explicit notification permission check before notify().
