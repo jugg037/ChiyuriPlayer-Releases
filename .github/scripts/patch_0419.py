@@ -223,7 +223,7 @@ old = '''            val versionCode = tag.split('.').mapNotNull { it.toIntOrNul
                 if (parts.size >= 3) parts[0] * 10000 + parts[1] * 100 + parts[2] else 0
             }
 '''
-new = '''            val declaredVersionCode = Regex("""(?im)^\\s*versionCode\\s*[:=]\\s*(\\d+)\\s*$""")
+new = r'''            val declaredVersionCode = Regex("""(?im)^\s*versionCode\s*[:=]\s*(\d+)\s*$""")
                 .find(json.optString("body"))
                 ?.groupValues
                 ?.getOrNull(1)
