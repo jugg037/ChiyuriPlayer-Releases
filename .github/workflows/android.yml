@@ -2202,8 +2202,30 @@ jobs:
           echo "$ANDROID_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/chiyuri-signing/release.jks"
           test -s "$RUNNER_TEMP/chiyuri-signing/release.jks"
 
-      - name: Run unit tests and Android lint
-        run: gradle testDebugUnitTest lintRelease -PVERSION_CODE=${APP_VERSION_CODE}
+      - name: Run unit tests
+        run: gradle testDebugUnitTest -PVERSION_CODE=${APP_VERSION_CODE}
+
+      - name: Run Android lint
+        id: android_lint
+        continue-on-error: true
+        run: gradle lintRelease -PVERSION_CODE=${APP_VERSION_CODE}
+
+      - name: Upload Android lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChiyuriPlayer-lint-${{ github.run_number }}
+          path: |
+            app/build/reports/lint-results-release.html
+            app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Stop release when Android lint reports errors
+        if: steps.android_lint.outcome == 'failure'
+        run: |
+          echo "::error::Android Lint must pass before an APK can be published."
+          exit 1
 
       - name: Build signed release APK
         env:
