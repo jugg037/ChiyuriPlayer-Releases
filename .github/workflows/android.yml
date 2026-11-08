@@ -2081,6 +2081,11 @@ jobs:
           ART=app/src/main/java/com/chiyuri/player/ArtworkDecoder.kt
           grep -F 'MAX_ARTWORK_DIMENSION = 2048' "$ART"
           grep -F 'withContext(Dispatchers.Default) { decodeArtworkBitmap(artworkBytes) }' app/src/main/java/com/chiyuri/player/TrackArtworkBackdrop.kt
+          grep -F 'downloadArtworkPreview' app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt
+          grep -F 'MAX_PLAYLIST_BYTES = 4 * 1024 * 1024' app/src/main/java/com/chiyuri/player/M3uPlaylistCodec.kt
+          grep -F 'MAX_PLAYLIST_ENTRIES = 10000' app/src/main/java/com/chiyuri/player/M3uPlaylistCodec.kt
+          grep -F 'M3uPlaylistCodec.read(it)' app/src/main/java/com/chiyuri/player/MainActivity.kt
+          test -s app/src/test/java/com/chiyuri/player/M3uPlaylistCodecTest.kt
           grep -F 'fun install(context: Context, apk: File): String' "$UPDATES"
           grep -F 'installMessage = AppUpdates.install' "$UPDATES"
           grep -F 'shuffle_enabled' "$QUEUE"
