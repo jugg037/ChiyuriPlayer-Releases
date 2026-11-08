@@ -11,6 +11,7 @@ on:
       - ".github/scripts/patch_0416.py"
       - ".github/scripts/patch_0418.py"
       - ".github/scripts/patch_0419.py"
+      - ".github/scripts/patch_0420.py"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
       - ".github/assets/chiyuri_background.webp.b64"
@@ -28,8 +29,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.19"
-      APP_VERSION_CODE: "329"
+      APP_VERSION_NAME: "0.4.20"
+      APP_VERSION_CODE: "330"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2067,6 +2068,29 @@ jobs:
           ! grep -F 'Аудиофайл никуда не отправляется. Аудиофайл никуда не отправляется.' "$LYRICS"
           test -s app/src/test/java/com/chiyuri/player/SubtitleSupportTest.kt
           echo "0.4.19 external subtitles, manifest validation and reactive update state verified."
+
+      - name: Apply reliability and playback improvements 0.4.20
+        run: python3 .github/scripts/patch_0420.py
+
+      - name: Verify reliability and playback improvements 0.4.20
+        run: |
+          set -eu
+          UPDATES=app/src/main/java/com/chiyuri/player/AppUpdates.kt
+          QUEUE=app/src/main/java/com/chiyuri/player/PlaybackQueueStore.kt
+          LYRICS=app/src/main/java/com/chiyuri/player/LyricsRepository.kt
+          ART=app/src/main/java/com/chiyuri/player/ArtworkDecoder.kt
+          grep -F 'MAX_ARTWORK_DIMENSION = 2048' "$ART"
+          grep -F 'bitmap = bytes?.let(::decodeArtworkBitmap)' app/src/main/java/com/chiyuri/player/TrackArtworkBackdrop.kt
+          grep -F 'fun install(context: Context, apk: File): String' "$UPDATES"
+          grep -F 'installMessage = AppUpdates.install' "$UPDATES"
+          grep -F 'shuffle_enabled' "$QUEUE"
+          grep -F 'repeat_mode' "$QUEUE"
+          grep -F 'playback_speed' "$QUEUE"
+          grep -F 'CACHE_TTL_MS = 12L * 60L * 60L * 1000L' "$LYRICS"
+          grep -F 'catch (cancelled: CancellationException)' "$LYRICS"
+          grep -F 'orElse("330")' app/build.gradle.kts
+          test -s app/src/test/java/com/chiyuri/player/ArtworkDecoderTest.kt
+          echo "0.4.20 bounded artwork, safe installer, queue restore, lyric cache and Gradle fallback verified."
 
       - name: Verify embedded background asset from 0.4.15
         run: |
