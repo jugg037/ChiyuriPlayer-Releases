@@ -1,6 +1,6 @@
 # История изменений ChiyuriPlayer
 
-## 0.4.21 — подготовка следующего выпуска
+## 0.4.21 — 8 ноября 2026
 
 **Статус:** опубликован GitHub Release v0.4.21. Workflow №157 завершился успешно: unit-тесты пройдены, Android Lint — 0 ошибок, подписанный APK собран, packageName/versionName/versionCode и сертификат проверены. SHA-256 сверена с опубликованным checksum-файлом и digest GitHub Release. API releases/latest возвращает v0.4.21.
 
