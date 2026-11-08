@@ -202,7 +202,7 @@ replace_once(updates,
 # BitmapFactory decode. Reuse the bounded decoder and explicit HTTPS/time limits.
 details = ROOT / "TrackDetailsComponents.kt"
 source = details.read_text(encoding="utf-8")
-source = source.replace("import android.graphics.BitmapFactory\\n", "")
+source = source.replace("import android.graphics.BitmapFactory" + chr(10), "")
 details.write_text(source, encoding="utf-8")
 replace_once(details,
     """            val bytes = embedded ?: if (artworkUrl?.startsWith("https://") == true) {
@@ -242,8 +242,11 @@ helper = """private fun downloadArtworkPreview(address: String): ByteArray? {
 }
 
 """
-if(s.split("@Composable\\ninternal fun TrackArtwork(").length!==2) throw new Error("TrackArtwork insertion marker");
-s=s.replace("@Composable\\ninternal fun TrackArtwork(",helper+"@Composable\\ninternal fun TrackArtwork(");
+track_marker = "@Composable" + chr(10) + "internal fun TrackArtwork("
+if source.count(track_marker) != 1:
+    raise SystemExit("TrackArtwork insertion marker is missing or ambiguous")
+source = source.replace(track_marker, helper + track_marker, 1)
+details.write_text(source, encoding="utf-8")
 
 # Bound M3U import size and entry count to prevent huge files from exhausting memory.
 m3u = ROOT / "M3uPlaylistCodec.kt"
@@ -294,7 +297,7 @@ replace_once(ROOT / "MainActivity.kt",
                         } ?: throw IllegalStateException("Не удалось прочитать выбранный файл")""",
     "bounded M3U import")
 
-(test_dir / "M3uPlaylistCodecTest.kt").write_text("""package com.chiyuri.player
+(Path("app/src/test/java/com/chiyuri/player") / "M3uPlaylistCodecTest.kt").write_text("""package com.chiyuri.player
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
