@@ -29,8 +29,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.20"
-      APP_VERSION_CODE: "330"
+      APP_VERSION_NAME: "0.4.21"
+      APP_VERSION_CODE: "331"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2109,7 +2109,7 @@ jobs:
           grep -F 'READ_MEDIA_VISUAL_USER_SELECTED' app/src/main/AndroidManifest.xml
           grep -F 'ActivityResultContracts.RequestMultiplePermissions()' app/src/main/java/com/chiyuri/player/MainActivity.kt
           grep -F 'fun hasMediaPermission()' app/src/main/java/com/chiyuri/player/MainActivity.kt
-          grep -F 'orElse("330")' app/build.gradle.kts
+          grep -F 'orElse("331")' app/build.gradle.kts
           test -s app/src/test/java/com/chiyuri/player/ArtworkDecoderTest.kt
           echo "0.4.20 bounded artwork, safe installer, queue restore, lyric cache and Gradle fallback verified."
 
@@ -2307,10 +2307,13 @@ jobs:
           name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
           body: |
             Исправлен сценарий установки обновления при отсутствии разрешения Android: настройки открываются без аварийного завершения, интерфейс объясняет повторный шаг.
-            Загрузка и декодирование обложек ограничены по размеру и разрешению для защиты памяти.
+            Загрузка и декодирование обложек, включая предпросмотр в редакторе метаданных, ограничены по размеру и разрешению; декодирование выполняется вне главного потока.
             Очередь сохраняет перемешивание, повтор и скорость воспроизведения; исправлено восстановление индекса при пропуске некорректных URI.
-            Добавлен 12-часовой кэш текстов песен, ограниченный 120 записями; отмена сетевых и редакторских задач корректно распространяется через корутины.
-            Исправлен локальный резервный versionCode: 330.
+            Добавлен 12-часовой кэш текстов песен (до 120 результатов) и корректная отмена сетевых/редакторских задач.
+            Импорт M3U/M3U8 ограничен 4 МБ и 10000 записями.
+            Исправлена громкость: максимальный суммарный уровень — 200% (2x), включая кнопки телефона и индикатор.
+            Добавлена поддержка частичного доступа к видео на Android 14+.
+            Android Lint и unit-тесты обязательны; CI запрещает сборку/публикацию из устаревшего коммита main.
             Версия сборки: versionCode ${{ env.APP_VERSION_CODE }}.
             Сохранены внешние субтитры, выделение текущего трека и автоматическое позиционирование очереди.
           files: |
