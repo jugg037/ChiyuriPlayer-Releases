@@ -9,6 +9,7 @@ on:
       - ".github/scripts/patch_0414.py"
       - ".github/scripts/patch_0415.py"
       - ".github/scripts/patch_0416.py"
+      - ".github/scripts/patch_0418.py"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
       - ".github/assets/chiyuri_background.webp.b64"
@@ -26,8 +27,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.17"
-      APP_VERSION_CODE: "327"
+      APP_VERSION_NAME: "0.4.18"
+      APP_VERSION_CODE: "328"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2030,6 +2031,21 @@ jobs:
           grep -F 'brush = ChiyuriSpectrum' "$VISUALIZER"
           echo "0.4.17 visual refinement markers verified: Compose fallback image and rainbow bars are wired."
 
+      - name: Apply current-track and queue navigation update 0.4.18
+        run: python3 .github/scripts/patch_0418.py
+
+      - name: Verify current-track highlighting and queue auto-scroll
+        run: |
+          set -eu
+          MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
+          grep -F 'currentMediaUri = uri?.toString()' "$MAIN"
+          grep -F 'queueListState.animateScrollToItem(activeIndex)' "$MAIN"
+          grep -F 'state = queueListState' "$MAIN"
+          grep -F 'val isCurrentItem = index == player.currentMediaItemIndex' "$MAIN"
+          grep -F 'val isCurrentTrack = !isVideo && item.uri.toString() == currentMediaUri' "$MAIN"
+          grep -F 'СЕЙЧАС ВОСПРОИЗВОДИТСЯ' "$MAIN"
+          echo "0.4.18 active track highlighting and open-queue positioning verified."
+
       - name: Verify embedded background asset from 0.4.15
         run: |
           set -eu
@@ -2177,9 +2193,8 @@ jobs:
           tag_name: v${{ env.APP_VERSION_NAME }}
           name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
           body: |
-            Обновлены прозрачность мини-плеера и фоновых поверхностей: свёрнутый мини-плеер — 70%, развёрнутый — 0%, основные поверхности — 5%.
-            Размытие фонового изображения уменьшено до 1 dp. Исправлено масштабирование основного фона с сохранением пропорций.
-            Обложка активного трека полностью заменяет основной фон на время воспроизведения. Аудиовизуализатор использует цветовой спектр.
+            Текущий воспроизводимый трек заметно выделяется в музыкальной библиотеке и очереди. При открытии очереди список автоматически переходит к текущему треку, после чего остаётся свободная ручная прокрутка.
+            Сохранены улучшения оформления и фонового изображения из предыдущих обновлений.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
