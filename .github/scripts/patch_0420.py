@@ -198,6 +198,132 @@ replace_once(updates,
     "onClick = { installMessage = AppUpdates.install(context, java.io.File(downloadedPath)) },",
     "updater install click")
 
+# The metadata editor preview used URL.openStream().readBytes() and a full-size
+# BitmapFactory decode. Reuse the bounded decoder and explicit HTTPS/time limits.
+details = ROOT / "TrackDetailsComponents.kt"
+source = details.read_text(encoding="utf-8")
+source = source.replace("import android.graphics.BitmapFactory\\n", "")
+details.write_text(source, encoding="utf-8")
+replace_once(details,
+    """            val bytes = embedded ?: if (artworkUrl?.startsWith("https://") == true) {
+                runCatching { URL(artworkUrl).openStream().use { it.readBytes() } }.getOrNull()
+            } else null
+            bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }""",
+    """            val bytes = embedded ?: artworkUrl?.takeIf { it.startsWith("https://") }
+                ?.let(::downloadArtworkPreview)
+            bytes?.let(::decodeArtworkBitmap)""",
+    "bounded metadata editor artwork preview")
+helper = """private fun downloadArtworkPreview(address: String): ByteArray? {
+    val connection = URL(address).openConnection() as java.net.HttpURLConnection
+    return try {
+        connection.connectTimeout = 7000
+        connection.readTimeout = 10000
+        connection.instanceFollowRedirects = true
+        if (connection.responseCode !in 200..299 || !connection.url.protocol.equals("https", true)) return null
+        if (connection.contentLengthLong > MAX_ARTWORK_BYTES) return null
+        connection.inputStream.use { input ->
+            val output = java.io.ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            var total = 0
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                if (total + count > MAX_ARTWORK_BYTES) return@use null
+                output.write(buffer, 0, count)
+                total += count
+            }
+            output.toByteArray()
+        }
+    } catch (_: Exception) {
+        null
+    } finally {
+        connection.disconnect()
+    }
+}
+
+"""
+if(s.split("@Composable\\ninternal fun TrackArtwork(").length!==2) throw new Error("TrackArtwork insertion marker");
+s=s.replace("@Composable\\ninternal fun TrackArtwork(",helper+"@Composable\\ninternal fun TrackArtwork(");
+
+# Bound M3U import size and entry count to prevent huge files from exhausting memory.
+m3u = ROOT / "M3uPlaylistCodec.kt"
+replace_once(m3u,
+    """object M3uPlaylistCodec {
+    fun parse(content: String): List<M3uEntry> {
+        val entries = mutableListOf<M3uEntry>()""",
+    """object M3uPlaylistCodec {
+    const val MAX_PLAYLIST_BYTES = 4 * 1024 * 1024
+    const val MAX_PLAYLIST_ENTRIES = 10000
+
+    fun read(input: java.io.InputStream): String {
+        val output = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(8192)
+        var total = 0
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            require(total + count <= MAX_PLAYLIST_BYTES) {
+                "Файл плейлиста превышает допустимый размер 4 МБ."
+            }
+            output.write(buffer, 0, count)
+            total += count
+        }
+        return String(output.toByteArray(), Charsets.UTF_8)
+    }
+
+    fun parse(content: String): List<M3uEntry> {
+        require(content.length <= MAX_PLAYLIST_BYTES) { "Текст плейлиста слишком большой." }
+        val entries = mutableListOf<M3uEntry>()""",
+    "bounded M3U parser")
+replace_once(m3u,
+    """                else -> {
+                    val fallbackTitle = line.substringAfterLast('/')""",
+    """                else -> {
+                    require(entries.size < MAX_PLAYLIST_ENTRIES) {
+                        "Плейлист содержит больше 10000 записей."
+                    }
+                    val fallbackTitle = line.substringAfterLast('/')""",
+    "M3U entry limit")
+replace_once(ROOT / "MainActivity.kt",
+    """                        val content = context.contentResolver.openInputStream(source)
+                            ?.bufferedReader(Charsets.UTF_8)
+                            ?.use { it.readText() }
+                            ?: throw IllegalStateException("Не удалось прочитать выбранный файл")""",
+    """                        val content = context.contentResolver.openInputStream(source)?.use {
+                            M3uPlaylistCodec.read(it)
+                        } ?: throw IllegalStateException("Не удалось прочитать выбранный файл")""",
+    "bounded M3U import")
+
+(test_dir / "M3uPlaylistCodecTest.kt").write_text("""package com.chiyuri.player
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
+import org.junit.Test
+import java.io.ByteArrayInputStream
+
+class M3uPlaylistCodecTest {
+    @Test fun readsUtf8PlaylistWithinLimit() {
+        val content = "#EXTM3U\\n#EXTINF:120,Track\\ncontent://media/1\\n"
+        assertEquals(content, M3uPlaylistCodec.read(ByteArrayInputStream(content.toByteArray(Charsets.UTF_8))))
+        assertEquals(1, M3uPlaylistCodec.parse(content).size)
+    }
+
+    @Test fun rejectsPlaylistLargerThanLimit() {
+        val bytes = ByteArray(M3uPlaylistCodec.MAX_PLAYLIST_BYTES + 1)
+        assertThrows(IllegalArgumentException::class.java) {
+            M3uPlaylistCodec.read(ByteArrayInputStream(bytes))
+        }
+    }
+
+    @Test fun rejectsTooManyEntries() {
+        val content = (1..(M3uPlaylistCodec.MAX_PLAYLIST_ENTRIES + 1)).joinToString("\\n") { "content://media/$it" }
+        assertThrows(IllegalArgumentException::class.java) {
+            M3uPlaylistCodec.parse(content)
+        }
+    }
+}
+""", encoding="utf-8")
+
 # Decode the sampled bitmap off the main thread as well as fetching bytes off-thread.
 replace_once(backdrop,
     "bitmap = bytes?.let(::decodeArtworkBitmap)",
