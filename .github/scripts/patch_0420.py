@@ -554,38 +554,38 @@ replace_once(ROOT / "TrackDetailsComponents.kt",
 
 # Make Media3 unstable API opt-ins explicit to both Kotlin and Android Lint.
 for file_name, import_anchor in [
-    ("AudioEffectsController.kt", "import androidx.media3.common.Player\\n"),
-    ("AudioVisualizer.kt", "import androidx.media3.common.Player\\n"),
-    ("MainActivity.kt", "import androidx.media3.common.Player\\n")
+    ("AudioEffectsController.kt", "import androidx.media3.common.Player\n"),
+    ("AudioVisualizer.kt", "import androidx.media3.common.Player\n"),
+    ("MainActivity.kt", "import androidx.media3.common.Player\n")
 ]:
     path = ROOT / file_name
     source = path.read_text(encoding="utf-8")
     if "import androidx.media3.common.util.UnstableApi" not in source:
         if import_anchor not in source:
             raise SystemExit("UnstableApi import anchor missing in " + file_name)
-        source = source.replace(import_anchor, import_anchor + "import androidx.media3.common.util.UnstableApi\\n", 1)
+        source = source.replace(import_anchor, import_anchor + "import androidx.media3.common.util.UnstableApi\n", 1)
         path.write_text(source, encoding="utf-8")
 
 replace_once(ROOT / "AudioEffectsController.kt",
     "class AudioEffectsController(",
-    "@OptIn(UnstableApi::class)\\n@androidx.annotation.OptIn(markerClass = [UnstableApi::class])\\nclass AudioEffectsController(",
+    "@OptIn(UnstableApi::class)\n@androidx.annotation.OptIn(markerClass = [UnstableApi::class])\nclass AudioEffectsController(",
     "AudioEffectsController Media3 opt-in")
 replace_once(ROOT / "AudioVisualizer.kt",
     "internal object AudioVisualizerBridge {",
-    "@OptIn(UnstableApi::class)\\n@androidx.annotation.OptIn(markerClass = [UnstableApi::class])\\ninternal object AudioVisualizerBridge {",
+    "@OptIn(UnstableApi::class)\n@androidx.annotation.OptIn(markerClass = [UnstableApi::class])\ninternal object AudioVisualizerBridge {",
     "AudioVisualizerBridge Media3 opt-in")
 replace_once(ROOT / "MainActivity.kt",
-    "@Composable\\nprivate fun PlayerHome(",
-    "@Composable\\n@OptIn(UnstableApi::class)\\n@androidx.annotation.OptIn(markerClass = [UnstableApi::class])\\nprivate fun PlayerHome(",
+    "@Composable\nprivate fun PlayerHome(",
+    "@Composable\n@OptIn(UnstableApi::class)\n@androidx.annotation.OptIn(markerClass = [UnstableApi::class])\nprivate fun PlayerHome(",
     "PlayerHome Media3 opt-in")
 replace_once(ROOT / "PlaybackService.kt",
-    "@OptIn(UnstableApi::class)\\nclass PlaybackService",
-    "@OptIn(UnstableApi::class)\\n@androidx.annotation.OptIn(markerClass = [UnstableApi::class])\\nclass PlaybackService",
+    "@OptIn(UnstableApi::class)\nclass PlaybackService",
+    "@OptIn(UnstableApi::class)\n@androidx.annotation.OptIn(markerClass = [UnstableApi::class])\nclass PlaybackService",
     "PlaybackService Media3 lint opt-in")
 
 replace_once(ROOT / "MainActivity.kt",
     "    override fun dispatchKeyEvent(event: KeyEvent): Boolean {",
-    "    @android.annotation.SuppressLint(\\"RestrictedApi\\")\\n    override fun dispatchKeyEvent(event: KeyEvent): Boolean {",
+    "    @android.annotation.SuppressLint(\"RestrictedApi\")\n    override fun dispatchKeyEvent(event: KeyEvent): Boolean {",
     "volume key event restricted API suppression")
 
 # Android 13+ requires an explicit notification permission check before notify().
