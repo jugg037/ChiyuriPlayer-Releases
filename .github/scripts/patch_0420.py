@@ -198,6 +198,12 @@ replace_once(updates,
     "onClick = { installMessage = AppUpdates.install(context, java.io.File(downloadedPath)) },",
     "updater install click")
 
+# Decode the sampled bitmap off the main thread as well as fetching bytes off-thread.
+replace_once(backdrop,
+    "bitmap = bytes?.let(::decodeArtworkBitmap)",
+    "bitmap = bytes?.let { artworkBytes -> withContext(Dispatchers.Default) { decodeArtworkBitmap(artworkBytes) } }",
+    "background artwork decode dispatcher")
+
 # Bounded in-memory lyric cache avoids repeated provider requests; propagate
 # cancellation instead of swallowing it as a normal network failure.
 lyrics = ROOT / "LyricsRepository.kt"
@@ -370,6 +376,43 @@ replace_once(ROOT / "TrackDetailsComponents.kt",
                                 message = "Ошибка поиска. Введённые данные не изменены.""",
     "metadata search cancellation")
 
+# Compose effects and editor jobs must rethrow cancellation instead of displaying
+# stale network/file errors after the screen or request has been cancelled.
+const_placeholder = ""
+source = updates.read_text(encoding="utf-8")
+old_check = """            } catch (e: Exception) {
+                error = e.message ?: "Ошибка проверки обновлений"
+                status = "Проверка не завершена"
+            } finally {"""
+new_check = """            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (e: Exception) {
+                error = e.message ?: "Ошибка проверки обновлений"
+                status = "Проверка не завершена"
+            } finally {"""
+if source.count(old_check) != 2:
+    raise SystemExit("Expected two updater check cancellation blocks")
+updates.write_text(source.replace(old_check, new_check), encoding="utf-8")
+
+replace_once(ROOT / "TrackDetailsComponents.kt",
+    """                } catch (error: Exception) {
+                    message = "Не удалось получить доступ к файлу: " + (error.message ?: "неизвестная ошибка")""",
+    """                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    writingToFile = false
+                    throw cancelled
+                } catch (error: Exception) {
+                    message = "Не удалось получить доступ к файлу: " + (error.message ?: "неизвестная ошибка")""",
+    "document grant cancellation")
+replace_once(ROOT / "TrackDetailsComponents.kt",
+    """                            } catch (error: Exception) {
+                                message = "Не удалось подготовить копию: " + (error.message ?: "неизвестная ошибка")""",
+    """                            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                                writingToFile = false
+                                throw cancelled
+                            } catch (error: Exception) {
+                                message = "Не удалось подготовить копию: " + (error.message ?: "неизвестная ошибка")""",
+    "metadata copy cancellation")
+
 # Keep local non-CI builds on the current release code instead of stale 201.
 gradle = Path("app/build.gradle.kts")
 replace_once(gradle,
@@ -391,8 +434,8 @@ class ArtworkDecoderTest {
     @Test fun downsamplesLargeImages() {
         val sample = artworkSampleSize(12000, 8000)
         assertEquals(8, sample)
-        assert(12000 / sample <= MAX_ARTWORK_DIMENSION)
-        assert(8000 / sample <= MAX_ARTWORK_DIMENSION)
+        assertTrue(12000 / sample <= MAX_ARTWORK_DIMENSION)
+        assertTrue(8000 / sample <= MAX_ARTWORK_DIMENSION)
     }
 
     @Test fun handlesInvalidDimensions() {
