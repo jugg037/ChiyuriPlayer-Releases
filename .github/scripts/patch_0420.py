@@ -747,7 +747,7 @@ replace_once(updates,
 gradle = Path("app/build.gradle.kts")
 replace_once(gradle,
     'versionCode = providers.gradleProperty("VERSION_CODE").orElse("201").get().toInt()',
-    'versionCode = providers.gradleProperty("VERSION_CODE").orElse("330").get().toInt()',
+    'versionCode = providers.gradleProperty("VERSION_CODE").orElse("331").get().toInt()',
     "Gradle versionCode fallback")
 
 test_dir = Path("app/src/test/java/com/chiyuri/player")
