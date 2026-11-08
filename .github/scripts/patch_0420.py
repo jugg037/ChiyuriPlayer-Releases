@@ -644,6 +644,7 @@ source = volumeIndicator.read_text(encoding="utf-8")
 if source.count("coerceIn(0, 200)") != 2:
     raise SystemExit("Expected two volume meter boost bounds.")
 source = source.replace("coerceIn(0, 200)", "coerceIn(0, 100)")
+volumeIndicator.write_text(source, encoding="utf-8")
 replace_once(volumeIndicator,
     "boostPercent / 200f",
     "boostPercent / 100f",
