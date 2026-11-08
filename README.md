@@ -4,10 +4,10 @@
 
 ## Актуальный релиз
 
-Последний опубликованный релиз: **0.4.18**.
+Последний опубликованный релиз: **0.4.19**.
 
-- [Скачать APK 0.4.18](https://github.com/jugg037/ChiyuriPlayer-Releases/releases/download/v0.4.18/app-release.apk)
-- [Контрольная сумма SHA-256](https://github.com/jugg037/ChiyuriPlayer-Releases/releases/download/v0.4.18/ChiyuriPlayer-0.4.18.sha256)
+- [Скачать APK 0.4.19](https://github.com/jugg037/ChiyuriPlayer-Releases/releases/download/v0.4.19/app-release.apk)
+- [Контрольная сумма SHA-256](https://github.com/jugg037/ChiyuriPlayer-Releases/releases/download/v0.4.19/ChiyuriPlayer-0.4.19.sha256)
 - [Все релизы](https://github.com/jugg037/ChiyuriPlayer-Releases/releases)
 - [История изменений](CHANGELOG.md)
 
@@ -22,6 +22,7 @@
 - Центр обновлений с проверкой SHA-256 и сертификата подписи APK.
 - Фоновая загрузка обновления с прогрессом и отменой из приложения или системного уведомления.
 - Редактирование тегов и встроенных текстов песен.
+- Подключение внешних субтитров SRT, VTT, ASS/SSA и TTML.
 - Поиск текстов по нескольким внешним каталогам и отображение синхронизированного текста в мини-плеере.
 - Эквалайзер, аудиоэффекты, медиатека и динамическое оформление.
 
