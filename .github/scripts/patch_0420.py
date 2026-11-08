@@ -588,6 +588,85 @@ replace_once(ROOT / "MainActivity.kt",
     '    @android.annotation.SuppressLint("RestrictedApi")' + chr(10) + '    override fun dispatchKeyEvent(event: KeyEvent): Boolean {',
     "volume key event restricted API suppression")
 
+# Android 14 selected-photo access: request the partial-media permission together
+# with READ_MEDIA_VIDEO and accept either full or user-selected video access.
+replace_once(Path("app/src/main/AndroidManifest.xml"),
+    """    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />""",
+    """    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />""",
+    "Android 14 selected video permission")
+
+replace_once(ROOT / "MainActivity.kt",
+    """    val permission = when {
+        Build.VERSION.SDK_INT >= 33 && isVideo -> Manifest.permission.READ_MEDIA_VIDEO
+        Build.VERSION.SDK_INT >= 33 -> Manifest.permission.READ_MEDIA_AUDIO
+        else -> Manifest.permission.READ_EXTERNAL_STORAGE
+    }""",
+    """    val permissions = when {
+        Build.VERSION.SDK_INT >= 34 && isVideo -> arrayOf(
+            Manifest.permission.READ_MEDIA_VIDEO,
+            Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+        )
+        Build.VERSION.SDK_INT >= 33 && isVideo -> arrayOf(Manifest.permission.READ_MEDIA_VIDEO)
+        Build.VERSION.SDK_INT >= 33 -> arrayOf(Manifest.permission.READ_MEDIA_AUDIO)
+        else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+    }
+    val permissionKey = permissions.joinToString("|")
+    fun hasMediaPermission(): Boolean {
+        if (Build.VERSION.SDK_INT >= 34 && isVideo) {
+            return ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) == PackageManager.PERMISSION_GRANTED
+        }
+        return ContextCompat.checkSelfPermission(context, permissions.first()) == PackageManager.PERMISSION_GRANTED
+    }""",
+    "selected media permission model")
+replace_once(ROOT / "MainActivity.kt",
+    """    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted || ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+            scanMedia()
+        } else {
+            permissionDenied = true
+        }
+    }
+
+    LaunchedEffect(isVideo, permission) {
+        if (LocalMediaRepository.shouldAutoScan(context, isVideo)) {
+            if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+                scanMedia()
+            } else if (mediaItems.isEmpty()) {
+                permissionLauncher.launch(permission)
+            }
+        }
+    }""",
+    """    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        if (grants.values.any { it } || hasMediaPermission()) {
+            scanMedia()
+        } else {
+            permissionDenied = true
+        }
+    }
+
+    LaunchedEffect(isVideo, permissionKey) {
+        if (LocalMediaRepository.shouldAutoScan(context, isVideo)) {
+            if (hasMediaPermission()) {
+                scanMedia()
+            } else if (mediaItems.isEmpty()) {
+                permissionLauncher.launch(permissions)
+            }
+        }
+    }""",
+    "selected media permission launcher")
+replace_once(ROOT / "MainActivity.kt",
+    """                        if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) scanMedia()
+                        else permissionLauncher.launch(permission)""",
+    """                        if (hasMediaPermission()) scanMedia()
+                        else permissionLauncher.launch(permissions)""",
+    "selected media refresh permission")
+
 # Android 13+ requires an explicit notification permission check before notify().
 replace_once(updates,
     """    fun showComplete(context: Context, version: String) {
