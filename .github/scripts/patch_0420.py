@@ -261,19 +261,19 @@ replace_once(lyrics,
 # Other cancellable UI jobs must not turn cancellation into false failures.
 replace_once(ROOT / "LyricsScreen.kt",
     """                    } catch (_: Exception) {
-                        message = "Не удалось выполнить поиск. Проверь подключение к интернету и попробуй снова."""",
+                        message = "Не удалось выполнить поиск. Проверь подключение к интернету и попробуй снова.""",
     """                    } catch (cancelled: kotlinx.coroutines.CancellationException) {
                         throw cancelled
                     } catch (_: Exception) {
-                        message = "Не удалось выполнить поиск. Проверь подключение к интернету и попробуй снова."""",
+                        message = "Не удалось выполнить поиск. Проверь подключение к интернету и попробуй снова.""",
     "lyrics screen cancellation")
 replace_once(ROOT / "LyricsScreen.kt",
     """                    } catch (_: Exception) {
-                        message = "Не удалось прочитать файл или выполнить онлайн-поиск."""",
+                        message = "Не удалось прочитать файл или выполнить онлайн-поиск.""",
     """                    } catch (cancelled: kotlinx.coroutines.CancellationException) {
                         throw cancelled
                     } catch (_: Exception) {
-                        message = "Не удалось прочитать файл или выполнить онлайн-поиск."""",
+                        message = "Не удалось прочитать файл или выполнить онлайн-поиск.""",
     "embedded lyrics cancellation")
 
 metadata = ROOT / "TrackMetadataRepository.kt"
@@ -363,11 +363,11 @@ replace_once(ROOT / "TrackDetailsComponents.kt",
     "metadata save cancellation")
 replace_once(ROOT / "TrackDetailsComponents.kt",
     """                            } catch (_: Exception) {
-                                message = "Ошибка поиска. Введённые данные не изменены."""",
+                                message = "Ошибка поиска. Введённые данные не изменены.""",
     """                            } catch (cancelled: kotlinx.coroutines.CancellationException) {
                                 throw cancelled
                             } catch (_: Exception) {
-                                message = "Ошибка поиска. Введённые данные не изменены."""",
+                                message = "Ошибка поиска. Введённые данные не изменены.""",
     "metadata search cancellation")
 
 # Keep local non-CI builds on the current release code instead of stale 201.
