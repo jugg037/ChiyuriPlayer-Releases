@@ -2095,6 +2095,11 @@ jobs:
           grep -F 'coerceIn(1f, 2f)' app/src/main/java/com/chiyuri/player/AudioEffectsSettings.kt
           grep -F 'coerceIn(0, 602)' app/src/main/java/com/chiyuri/player/AudioEffectsSettings.kt
           grep -F 'boostIsClampedToTwoHundredPercentTotal' app/src/test/java/com/chiyuri/player/PlaceholderTest.kt
+          grep -F 'coerceIn(0, 100)' app/src/main/java/com/chiyuri/player/VolumeIndicator.kt
+          grep -F 'boostPercent / 100f' app/src/main/java/com/chiyuri/player/VolumeIndicator.kt
+          grep -F 'READ_MEDIA_VISUAL_USER_SELECTED' app/src/main/AndroidManifest.xml
+          grep -F 'fun hasMediaPermission()' app/src/main/java/com/chiyuri/player/MainActivity.kt
+          test -s app/src/test/java/com/chiyuri/player/M3uPlaylistCodecTest.kt
           grep -F 'CACHE_TTL_MS = 12L * 60L * 60L * 1000L' "$LYRICS"
           grep -F 'catch (cancelled: CancellationException)' "$LYRICS"
           grep -F 'fun install(context: Context, apk: File): String' "$UPDATES"
