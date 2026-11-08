@@ -1,6 +1,6 @@
 # История изменений ChiyuriPlayer
 
-## 0.4.19 — подготовка следующего выпуска
+## 0.4.19 — 8 ноября 2026
 
 **Статус сборки:** опубликован GitHub Release v0.4.19; workflow #124 завершился успешно. Unit-тесты пройдены, подписанный APK собран, проверка packageName/versionName/versionCode и подписи прошла. Контрольная сумма APK сверена с файлом SHA-256 и digest GitHub Release. API GitHub Releases/latest возвращает v0.4.19.
 
