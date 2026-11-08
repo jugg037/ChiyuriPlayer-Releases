@@ -2102,6 +2102,9 @@ jobs:
           grep -F '@androidx.annotation.OptIn(markerClass = [UnstableApi::class])' app/src/main/java/com/chiyuri/player/MainActivity.kt
           grep -F '@androidx.annotation.OptIn(markerClass = [UnstableApi::class])' app/src/main/java/com/chiyuri/player/PlaybackService.kt
           grep -F '@android.annotation.SuppressLint("RestrictedApi")' app/src/main/java/com/chiyuri/player/MainActivity.kt
+          grep -F 'READ_MEDIA_VISUAL_USER_SELECTED' app/src/main/AndroidManifest.xml
+          grep -F 'ActivityResultContracts.RequestMultiplePermissions()' app/src/main/java/com/chiyuri/player/MainActivity.kt
+          grep -F 'fun hasMediaPermission()' app/src/main/java/com/chiyuri/player/MainActivity.kt
           grep -F 'orElse("330")' app/build.gradle.kts
           test -s app/src/test/java/com/chiyuri/player/ArtworkDecoderTest.kt
           echo "0.4.20 bounded artwork, safe installer, queue restore, lyric cache and Gradle fallback verified."
