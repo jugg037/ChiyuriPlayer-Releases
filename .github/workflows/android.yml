@@ -23,7 +23,7 @@ permissions:
 
 concurrency:
   group: chiyuriplayer-release
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -2246,6 +2246,15 @@ jobs:
           echo "::error::Android Lint must pass before an APK can be published."
           exit 1
 
+      - name: Ensure source is still latest main before building
+        run: |
+          set -eu
+          latest="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error::This run is stale; refusing to build an APK from an older main commit."
+            exit 1
+          fi
+
       - name: Build signed release APK
         env:
           CHIYURI_KEYSTORE_PATH: ${{ runner.temp }}/chiyuri-signing/release.jks
@@ -2281,6 +2290,15 @@ jobs:
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
           if-no-files-found: error
           retention-days: 30
+
+      - name: Ensure source is still latest main before publishing
+        run: |
+          set -eu
+          latest="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error::A newer main commit exists; refusing to publish this stale APK."
+            exit 1
+          fi
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
