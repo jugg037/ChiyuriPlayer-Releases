@@ -10,6 +10,7 @@ on:
       - ".github/scripts/patch_0415.py"
       - ".github/scripts/patch_0416.py"
       - ".github/scripts/patch_0418.py"
+      - ".github/scripts/patch_0419.py"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
       - ".github/assets/chiyuri_background.webp.b64"
@@ -27,8 +28,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.18"
-      APP_VERSION_CODE: "328"
+      APP_VERSION_NAME: "0.4.19"
+      APP_VERSION_CODE: "329"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2046,6 +2047,27 @@ jobs:
           grep -F 'СЕЙЧАС ВОСПРОИЗВОДИТСЯ' "$MAIN"
           echo "0.4.18 active track highlighting and open-queue positioning verified."
 
+      - name: Apply reliability and external subtitle update 0.4.19
+        run: python3 .github/scripts/patch_0419.py
+
+      - name: Verify reliability and external subtitle update 0.4.19
+        run: |
+          set -eu
+          MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
+          UPDATES=app/src/main/java/com/chiyuri/player/AppUpdates.kt
+          SUBTITLES=app/src/main/java/com/chiyuri/player/SubtitleSupport.kt
+          LYRICS=app/src/main/java/com/chiyuri/player/LyricsScreen.kt
+          grep -F 'Загрузить внешний файл субтитров' "$MAIN"
+          grep -F 'MediaItem.SubtitleConfiguration.Builder(subtitleUri)' "$MAIN"
+          grep -F 'externalSubtitleMimeTypeFromName' "$SUBTITLES"
+          grep -F 'getWorkInfosForUniqueWorkFlow' "$UPDATES"
+          grep -F 'archive.packageName == context.packageName' "$UPDATES"
+          grep -F 'archive.versionName == expectedVersionName' "$UPDATES"
+          grep -F 'archive.longVersionCode > installed.longVersionCode' "$UPDATES"
+          ! grep -F 'Аудиофайл никуда не отправляется. Аудиофайл никуда не отправляется.' "$LYRICS"
+          test -s app/src/test/java/com/chiyuri/player/SubtitleSupportTest.kt
+          echo "0.4.19 external subtitles, manifest validation and reactive update state verified."
+
       - name: Verify embedded background asset from 0.4.15
         run: |
           set -eu
@@ -2112,8 +2134,12 @@ jobs:
           name: ChiyuriPlayer-source-audit-${{ github.run_number }}
           path: |
             app/src/main/java
+            app/src/main/AndroidManifest.xml
+            app/src/main/res
             app/src/test
             app/build.gradle.kts
+            .github/scripts
+            .github/workflows/android.yml
           if-no-files-found: warn
           retention-days: 3
 
@@ -2193,8 +2219,11 @@ jobs:
           tag_name: v${{ env.APP_VERSION_NAME }}
           name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
           body: |
-            Текущий воспроизводимый трек заметно выделяется в музыкальной библиотеке и очереди. При открытии очереди список автоматически переходит к текущему треку, после чего остаётся свободная ручная прокрутка.
-            Сохранены улучшения оформления и фонового изображения из предыдущих обновлений.
+            Добавлена загрузка внешних субтитров SRT, VTT, ASS/SSA и TTML для видео.
+            Центр обновлений использует реактивное наблюдение WorkManager и дополнительно проверяет пакет, versionName, монотонность versionCode и сертификат APK.
+            Исправлено повторение уведомления о приватности в разделе текстов песен.
+            Версия сборки: versionCode ${{ env.APP_VERSION_CODE }}.
+            Сохранены выделение текущего трека, автоматическое позиционирование очереди и улучшения оформления предыдущих обновлений.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
