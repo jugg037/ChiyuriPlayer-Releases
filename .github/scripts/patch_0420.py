@@ -129,12 +129,12 @@ updates = ROOT / "AppUpdates.kt"
 replace_once(updates,
     """    fun install(context: Context, apk: File) {
         if (Build.VERSION.SDK_INT >= 26 && !context.packageManager.canRequestPackageInstalls()) {
-            val settings = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:\${context.packageName}"))
+            val settings = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(settings)
             error("Разрешите установку неизвестных приложений для ChiyuriPlayer и повторите установку")
         }
-        val uri: Uri = FileProvider.getUriForFile(context, "\${context.packageName}.updates", apk)
+        val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.updates", apk)
         val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
@@ -147,12 +147,12 @@ replace_once(updates,
             if (Build.VERSION.SDK_INT >= 26 && !context.packageManager.canRequestPackageInstalls()) {
                 val settings = Intent(
                     android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                    Uri.parse("package:\${context.packageName}")
+                    Uri.parse("package:${context.packageName}")
                 ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(settings)
                 return "Разрешите установку неизвестных приложений для ChiyuriPlayer в настройках, вернитесь сюда и нажмите «Установить» ещё раз."
             }
-            val uri = FileProvider.getUriForFile(context, "\${context.packageName}.updates", apk)
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.updates", apk)
             val intent = Intent(Intent.ACTION_VIEW)
                 .setDataAndType(uri, "application/vnd.android.package-archive")
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -334,22 +334,22 @@ replace_once(metadata,
     "Deezer metadata cancellation")
 replace_once(ROOT / "MainActivity.kt",
     """                } catch (error: Exception) {
-                    message = "Ошибка экспорта: \${error.localizedMessage ?: "неизвестная ошибка"}"
+                    message = "Ошибка экспорта: ${error.localizedMessage ?: "неизвестная ошибка"}"
                 }""",
     """                } catch (cancelled: kotlinx.coroutines.CancellationException) {
                     throw cancelled
                 } catch (error: Exception) {
-                    message = "Ошибка экспорта: \${error.localizedMessage ?: "неизвестная ошибка"}"
+                    message = "Ошибка экспорта: ${error.localizedMessage ?: "неизвестная ошибка"}"
                 }""",
     "playlist export cancellation")
 replace_once(ROOT / "MainActivity.kt",
     """                } catch (error: Exception) {
-                    message = "Ошибка импорта: \${error.localizedMessage ?: "неизвестная ошибка"}"
+                    message = "Ошибка импорта: ${error.localizedMessage ?: "неизвестная ошибка"}"
                 }""",
     """                } catch (cancelled: kotlinx.coroutines.CancellationException) {
                     throw cancelled
                 } catch (error: Exception) {
-                    message = "Ошибка импорта: \${error.localizedMessage ?: "неизвестная ошибка"}"
+                    message = "Ошибка импорта: ${error.localizedMessage ?: "неизвестная ошибка"}"
                 }""",
     "playlist import cancellation")
 replace_once(ROOT / "TrackDetailsComponents.kt",
