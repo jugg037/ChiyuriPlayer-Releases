@@ -2136,10 +2136,10 @@ jobs:
           grep -F 'FLAG_GRANT_READ_URI_PERMISSION or' "$MAIN"
           ! grep -R -E 'BassBoost|bassBoostStrength|KEY_BASS_STRENGTH|Усиление басов' app/src/main/java/com/chiyuri/player
           grep -F 'volumeBoostToMillibels(config.playerVolume)' "$AUDIO"
-          grep -F 'coerceIn(0, 954)' "$SETTINGS"
-          grep -F 'valueRange = 0f..2f' "$MAIN"
-          grep -F 'coerceAtMost(3f)' "$MAIN"
-          grep -F 'boostPercent / 200f' "$VOLUME"
+          grep -F 'coerceIn(0, 602)' "$SETTINGS"
+          grep -F 'valueRange = 0f..1f' "$MAIN"
+          grep -F 'coerceAtMost(2f)' "$MAIN"
+          grep -F 'boostPercent / 100f' "$VOLUME"
           grep -F 'mapsVolumeBoostToLoudnessEnhancerGain' "$TESTS"
           grep -F 'MediaStore.createWriteRequest(context.contentResolver, listOf(mediaUri))' "$EDITOR"
           grep -F 'StartIntentSenderForResult()' "$EDITOR"
@@ -2147,7 +2147,7 @@ jobs:
           grep -F 'FLAG_GRANT_WRITE_URI_PERMISSION' "$EDITOR"
           grep -F 'fun mediaStoreWriteUri(' "$REPO"
           grep -F 'fun isSameDocument(' "$REPO"
-          echo "Android write authorization is requested for MediaStore items and SAF documents before overwriting; verified Save As remains available. BassBoost removed; extra volume range is +200%."
+          echo "Android write authorization is requested for MediaStore items and SAF documents before overwriting; verified Save As remains available. BassBoost removed; total player volume is capped at 200%."
 
       - name: Verify update cancellation wiring
         run: |
