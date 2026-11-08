@@ -638,6 +638,17 @@ replace_once(Path("app/src/test/java/com/chiyuri/player/PlaceholderTest.kt"),
     "assertEquals(602, volumeBoostToMillibels(3f))",
     "volume gain cap test")
 
+# Keep the on-screen volume meter consistent with the 2x total ceiling.
+volumeIndicator = ROOT / "VolumeIndicator.kt"
+source = volumeIndicator.read_text(encoding="utf-8")
+if source.count("coerceIn(0, 200)") != 2:
+    raise SystemExit("Expected two volume meter boost bounds.")
+source = source.replace("coerceIn(0, 200)", "coerceIn(0, 100)")
+replace_once(volumeIndicator,
+    "boostPercent / 200f",
+    "boostPercent / 100f",
+    "volume meter total range")
+
 # Android 14 selected-photo access: request the partial-media permission together
 # with READ_MEDIA_VIDEO and accept either full or user-selected video access.
 replace_once(Path("app/src/main/AndroidManifest.xml"),
