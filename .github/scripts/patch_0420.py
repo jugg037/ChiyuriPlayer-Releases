@@ -552,6 +552,20 @@ replace_once(ROOT / "TrackDetailsComponents.kt",
                                 message = "Не удалось подготовить копию: " + (error.message ?: "неизвестная ошибка")""",
     "metadata copy cancellation")
 
+# Android 13+ requires an explicit notification permission check before notify().
+replace_once(updates,
+    """    fun showComplete(context: Context, version: String) {
+        ensureChannel(context)""",
+    """    fun showComplete(context: Context, version: String) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) return
+        ensureChannel(context)""",
+    "notification permission guard")
+
 # Keep local non-CI builds on the current release code instead of stale 201.
 gradle = Path("app/build.gradle.kts")
 replace_once(gradle,
