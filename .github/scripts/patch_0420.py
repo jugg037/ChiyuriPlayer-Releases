@@ -378,21 +378,30 @@ replace_once(ROOT / "TrackDetailsComponents.kt",
 
 # Compose effects and editor jobs must rethrow cancellation instead of displaying
 # stale network/file errors after the screen or request has been cancelled.
-const_placeholder = ""
-source = updates.read_text(encoding="utf-8")
-old_check = """            } catch (e: Exception) {
+replace_once(updates,
+    """            } catch (e: Exception) {
                 error = e.message ?: "Ошибка проверки обновлений"
                 status = "Проверка не завершена"
-            } finally {"""
-new_check = """            } catch (cancelled: CancellationException) {
+            } finally {""",
+    """            } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (e: Exception) {
                 error = e.message ?: "Ошибка проверки обновлений"
                 status = "Проверка не завершена"
-            } finally {"""
-if source.count(old_check) != 2:
-    raise SystemExit("Expected two updater check cancellation blocks")
-updates.write_text(source.replace(old_check, new_check), encoding="utf-8")
+            } finally {""",
+    "initial updater check cancellation")
+replace_once(updates,
+    """                            } catch (e: Exception) {
+                                error = e.message ?: "Ошибка проверки обновлений"
+                                status = "Проверка не завершена"
+                            } finally {""",
+    """                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (e: Exception) {
+                                error = e.message ?: "Ошибка проверки обновлений"
+                                status = "Проверка не завершена"
+                            } finally {""",
+    "manual updater check cancellation")
 
 replace_once(ROOT / "TrackDetailsComponents.kt",
     """                } catch (error: Exception) {
