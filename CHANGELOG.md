@@ -2,7 +2,7 @@
 
 ## 0.4.21 — подготовка следующего выпуска
 
-**Статус:** изменения в main; тесты, lint, сборка и публикация 0.4.21 ещё не подтверждены.
+**Статус:** опубликован GitHub Release v0.4.21. Workflow №157 завершился успешно: unit-тесты пройдены, Android Lint — 0 ошибок, подписанный APK собран, packageName/versionName/versionCode и сертификат проверены. SHA-256 сверена с опубликованным checksum-файлом и digest GitHub Release. API releases/latest возвращает v0.4.21.
 
 - Исправлен предел громкости: максимум 200% суммарно (2x), включая ползунок, аппаратные клавиши и индикатор.
 - Добавлен частичный доступ к видео на Android 14+ через READ_MEDIA_VISUAL_USER_SELECTED.
@@ -10,6 +10,12 @@
 - Импорт M3U/M3U8 ограничен 4 МБ и 10000 записями.
 - Исправления установки обновления, памяти обложек, очереди, кэша текстов и отмены корутин из предыдущей подготовки.
 - CI проверяет Android Lint, unit-тесты, подпись, packageName, versionName, versionCode и актуальность коммита main перед сборкой и публикацией.
+
+**versionCode:** 331.
+
+**APK SHA-256:** `8c2d8e5015512afc9c967a2e751457bf53aa001f958d5e0d561ab10034c6cbcd`.
+
+**APK:** [Скачать ChiyuriPlayer 0.4.21](https://github.com/jugg037/ChiyuriPlayer-Releases/releases/download/v0.4.21/app-release.apk).
 
 ## 0.4.20 — 8 ноября 2026
 
