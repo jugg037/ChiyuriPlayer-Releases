@@ -2091,6 +2091,10 @@ jobs:
           grep -F 'shuffle_enabled' "$QUEUE"
           grep -F 'repeat_mode' "$QUEUE"
           grep -F 'playback_speed' "$QUEUE"
+          grep -F 'coerceAtMost(2f)' app/src/main/java/com/chiyuri/player/MainActivity.kt
+          grep -F 'coerceIn(1f, 2f)' app/src/main/java/com/chiyuri/player/AudioEffectsSettings.kt
+          grep -F 'coerceIn(0, 602)' app/src/main/java/com/chiyuri/player/AudioEffectsSettings.kt
+          grep -F 'boostIsClampedToTwoHundredPercentTotal' app/src/test/java/com/chiyuri/player/PlaceholderTest.kt
           grep -F 'CACHE_TTL_MS = 12L * 60L * 60L * 1000L' "$LYRICS"
           grep -F 'catch (cancelled: CancellationException)' "$LYRICS"
           grep -F 'fun install(context: Context, apk: File): String' "$UPDATES"
