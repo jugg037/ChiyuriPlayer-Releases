@@ -32,17 +32,18 @@ replace_once(
 )
 replace_once(
     '    var showQueue by remember { mutableStateOf(false) }\n',
-    '    var showQueue by remember { mutableStateOf(false) }\n'
-    '    val queueListState = rememberLazyListState()\n'
-    '    LaunchedEffect(showQueue) {\n'
-    '        if (showQueue) {\n'
-    '            val activeIndex = player.currentMediaItemIndex\n'
-    '            if (activeIndex in 0 until player.mediaItemCount) {\n'
-    '                queueListState.animateScrollToItem(activeIndex)\n'
-    '            }\n'
-    '        }\n'
-    '    }\n',
-    "queue auto-scroll state"
+    '    var showQueue by remember { mutableStateOf(false) }\n',
+    "queue dialog state"
+)
+replace_once(
+    '    if (showQueue) {\n'
+    '        val queuedItems = remember(showQueue, queueVersion) {\n',
+    '    if (showQueue) {\n'
+    '        val queueListState = rememberLazyListState(\n'
+    '            initialFirstVisibleItemIndex = player.currentMediaItemIndex.coerceAtLeast(0)\n'
+    '        )\n'
+    '        val queuedItems = remember(showQueue, queueVersion) {\n',
+    "queue initial active position"
 )
 replace_once(
     '                val uri = mediaItem?.localConfiguration?.uri\n'
