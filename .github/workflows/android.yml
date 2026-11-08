@@ -22,7 +22,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: chiyuriplayer-release
+  group: chiyuriplayer-release-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
