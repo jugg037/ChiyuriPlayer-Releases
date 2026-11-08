@@ -2039,7 +2039,7 @@ jobs:
           set -eu
           MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
           grep -F 'currentMediaUri = uri?.toString()' "$MAIN"
-          grep -F 'queueListState.animateScrollToItem(activeIndex)' "$MAIN"
+          grep -F 'initialFirstVisibleItemIndex = player.currentMediaItemIndex.coerceAtLeast(0)' "$MAIN"
           grep -F 'state = queueListState' "$MAIN"
           grep -F 'val isCurrentItem = index == player.currentMediaItemIndex' "$MAIN"
           grep -F 'val isCurrentTrack = !isVideo && item.uri.toString() == currentMediaUri' "$MAIN"
