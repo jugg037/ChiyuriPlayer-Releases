@@ -588,6 +588,56 @@ replace_once(ROOT / "MainActivity.kt",
     '    @android.annotation.SuppressLint("RestrictedApi")' + chr(10) + '    override fun dispatchKeyEvent(event: KeyEvent): Boolean {',
     "volume key event restricted API suppression")
 
+# The agreed player volume ceiling is 200% total (2x), not +200% boost (3x).
+replace_once(ROOT / "AudioEffectsSettings.kt",
+    "playerVolume = bounded(config.playerVolume, 1f, 3f, 1f)",
+    "playerVolume = bounded(config.playerVolume, 1f, 2f, 1f)",
+    "total volume ceiling")
+replace_once(ROOT / "AudioEffectsSettings.kt",
+    "val multiplier = if (playerVolume.isFinite()) playerVolume.coerceIn(1f, 3f) else 1f",
+    "val multiplier = if (playerVolume.isFinite()) playerVolume.coerceIn(1f, 2f) else 1f",
+    "loudness enhancer volume ceiling")
+replace_once(ROOT / "AudioEffectsSettings.kt",
+    "(2000f * kotlin.math.log10(multiplier)).roundToInt().coerceIn(0, 954)",
+    "(2000f * kotlin.math.log10(multiplier)).roundToInt().coerceIn(0, 602)",
+    "loudness enhancer 2x gain ceiling")
+replace_once(ROOT / "MainActivity.kt",
+    "val boost = (config.playerVolume + 0.1f).coerceAtMost(3f)",
+    "val boost = (config.playerVolume + 0.1f).coerceAtMost(2f)",
+    "hardware volume key boost ceiling")
+replace_once(ROOT / "MainActivity.kt",
+    'Text("+${((config.playerVolume - 1f) * 100f).roundToInt()}%", color = MaterialTheme.colorScheme.primary)',
+    'Text("${(config.playerVolume * 100f).roundToInt()}%", color = MaterialTheme.colorScheme.primary)',
+    "volume total percentage label")
+replace_once(ROOT / "MainActivity.kt",
+    "(config.playerVolume - 1f).coerceIn(0f, 2f)",
+    "(config.playerVolume - 1f).coerceIn(0f, 1f)",
+    "volume slider current range")
+replace_once(ROOT / "MainActivity.kt",
+    "valueRange = 0f..2f,",
+    "valueRange = 0f..1f,",
+    "volume slider maximum")
+replace_once(ROOT / "MainActivity.kt",
+    '"Единая шкала: сначала системная громкость до 100%, затем усиление плеера от 0 до +200%. Кнопки громкости телефона управляют обоими уровнями.",',
+    '"Единая шкала: системная громкость до 100%, усиление плеера до 200% от текущего уровня. Общий предел плеера — 2x. Кнопки громкости телефона управляют обоими уровнями.",',
+    "volume ceiling description")
+replace_once(Path("app/src/test/java/com/chiyuri/player/PlaceholderTest.kt"),
+    "assertEquals(2.5f, normalized.playerVolume, 0f)",
+    "assertEquals(2f, normalized.playerVolume, 0f)",
+    "volume normalization expectation")
+replace_once(Path("app/src/test/java/com/chiyuri/player/PlaceholderTest.kt"),
+    "fun boostIsClampedToTwoHundredPercentAboveAndroidVolume()",
+    "fun boostIsClampedToTwoHundredPercentTotal()",
+    "volume test name")
+replace_once(Path("app/src/test/java/com/chiyuri/player/PlaceholderTest.kt"),
+    "assertEquals(3f, normalized.playerVolume, 0f)",
+    "assertEquals(2f, normalized.playerVolume, 0f)",
+    "volume total limit test")
+replace_once(Path("app/src/test/java/com/chiyuri/player/PlaceholderTest.kt"),
+    "assertEquals(954, volumeBoostToMillibels(3f))",
+    "assertEquals(602, volumeBoostToMillibels(3f))",
+    "volume gain cap test")
+
 # Android 14 selected-photo access: request the partial-media permission together
 # with READ_MEDIA_VIDEO and accept either full or user-selected video access.
 replace_once(Path("app/src/main/AndroidManifest.xml"),
