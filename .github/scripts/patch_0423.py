@@ -43,7 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.roundToInt
@@ -51,9 +51,9 @@ import kotlin.random.Random
 
 @Composable
 fun BloodLoader(progress: Float? = null, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val emblem = remember(context) {
-        context.getDrawable(R.drawable.chiyuri_emblem)?.let {
+    val resources = LocalResources.current
+    val emblem = remember(resources) {
+        resources.getDrawable(R.drawable.chiyuri_emblem, null)?.let {
             Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888).also { bitmap ->
                 val target = NativeCanvas(bitmap)
                 it.setBounds(0, 0, 512, 512)
