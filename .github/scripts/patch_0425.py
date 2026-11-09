@@ -15,33 +15,40 @@ mini.write_text(s, encoding="utf-8")
 
 updates = BASE / "AppUpdates.kt"
 u = updates.read_text(encoding="utf-8")
-old_icon = r'''                          androidx.compose.material3.Icon(
-                              androidx.compose.material.icons.Icons.Default.SystemUpdate,
-                              null,
-                              tint = MaterialTheme.colorScheme.primary,
-                              modifier = Modifier.size(42.dp)
-                          )'''
-new_header = r'''                          androidx.compose.foundation.layout.Box(
-                              modifier = Modifier.fillMaxWidth().height(190.dp),
-                              contentAlignment = androidx.compose.ui.Alignment.Center
-                          ) {
-                              androidx.compose.foundation.Image(
-                                  painter = androidx.compose.ui.res.painterResource(R.drawable.chiyuri_emblem),
-                                  contentDescription = null,
-                                  modifier = Modifier.fillMaxWidth().height(190.dp),
-                                  contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                                  alpha = 0.16f
-                              )
-                              if (checking || downloading) {
-                                  BloodLoader(
-                                      progress = if (downloading) progress / 100f else null,
-                                      modifier = Modifier.fillMaxWidth().height(190.dp)
-                                  )
-                              }
-                          }'''
-if u.count(old_icon) != 1:
-    raise SystemExit("Update-center icon anchor not found exactly once")
-u = u.replace(old_icon, new_header)
+pattern = re.compile(
+    r"(?m)^(?P<i>[ \t]*)androidx\.compose\.material3\.Icon\(\n"
+    r"(?P=i)    androidx\.compose\.material\.icons\.Icons\.Default\.SystemUpdate,\n"
+    r"(?P=i)    null,\n"
+    r"(?P=i)    tint = MaterialTheme\.colorScheme\.primary,\n"
+    r"(?P=i)    modifier = Modifier\.size\(42\.dp\)\n"
+    r"(?P=i)\)"
+)
+def header(match):
+    i = match.group("i")
+    return "\n".join([
+        i + "androidx.compose.foundation.layout.Box(",
+        i + "    modifier = Modifier.fillMaxWidth().height(190.dp),",
+        i + "    contentAlignment = androidx.compose.ui.Alignment.Center",
+        i + ") {",
+        i + "    androidx.compose.foundation.Image(",
+        i + "        painter = androidx.compose.ui.res.painterResource(R.drawable.chiyuri_emblem),",
+        i + "        contentDescription = null,",
+        i + "        modifier = Modifier.fillMaxWidth().height(190.dp),",
+        i + "        contentScale = androidx.compose.ui.layout.ContentScale.Fit,",
+        i + "        alpha = 0.16f",
+        i + "    )",
+        i + "    if (checking || downloading) {",
+        i + "        BloodLoader(",
+        i + "            progress = if (downloading) progress / 100f else null,",
+        i + "            modifier = Modifier.fillMaxWidth().height(190.dp)",
+        i + "        )",
+        i + "    }",
+        i + "}"
+    ])
+u, count = pattern.subn(header, u, count=1)
+if count != 1:
+    raise SystemExit("Update-center SystemUpdate icon anchor not found exactly once")
+
 old_version = '"Установлена версия " + AppUpdates.CURRENT_VERSION,'
 new_version = '"Установлена версия " + AppUpdates.CURRENT_VERSION + " - " + AppUpdates.CURRENT_VERSION_CODE,'
 if u.count(old_version) != 1:
