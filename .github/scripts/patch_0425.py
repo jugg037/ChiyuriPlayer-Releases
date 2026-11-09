@@ -42,7 +42,7 @@ def header(match):
         i + "    if (checking || downloading) {",
         i + "        BloodLoader(",
         i + "            progress = if (downloading) progress / 100f else null,",
-        i + "            modifier = Modifier.fillMaxWidth().height(190.dp)",
+        i + "            modifier = Modifier.size(190.dp)",
         i + "        )",
         i + "    }",
         i + "}"
