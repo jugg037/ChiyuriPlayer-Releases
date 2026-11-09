@@ -14,6 +14,7 @@ on:
       - ".github/scripts/patch_0420.py"
       - ".github/scripts/patch_0421.py"
       - ".github/scripts/patch_0422.py"
+      - ".github/scripts/patch_0423.py"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
       - ".github/assets/chiyuri_background.webp.b64"
@@ -31,8 +32,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.23"
-      APP_VERSION_CODE: "333"
+      APP_VERSION_NAME: "0.4.24"
+      APP_VERSION_CODE: "334"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2182,6 +2183,26 @@ jobs:
           grep -F 'orElse("333")' app/build.gradle.kts
           echo "Current-track removal, +200% player gain, hardware keys, indicator and tests verified."
 
+      - name: Apply Chiyuri Blood Loader 0.4.24
+        run: python3 .github/scripts/patch_0423.py
+
+      - name: Verify Chiyuri Blood Loader integrations and assets
+        run: |
+          set -eu
+          LOADER=app/src/main/java/com/chiyuri/player/BloodLoadingIndicator.kt
+          test -s "$LOADER"
+          test -s app/src/main/res/drawable/chiyuri_emblem.xml
+          grep -F 'rotation - 90f' "$LOADER"
+          grep -F 'progress?.coerceIn(0f, 1f)' "$LOADER"
+          grep -F 'PorterDuff.Mode.DST_IN' "$LOADER"
+          grep -F 'BloodLoader(progress = progress / 100f' app/src/main/java/com/chiyuri/player/AppUpdates.kt
+          grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/MainActivity.kt
+          grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsScreen.kt
+          grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt
+          grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsMiniPanel.kt
+          grep -F 'orElse("334")' app/build.gradle.kts
+          echo "Startup, media scan, metadata, lyrics and update-center loaders verified."
+
       - name: Verify embedded background asset from 0.4.15
         run: |
           set -eu
@@ -2375,8 +2396,7 @@ jobs:
           tag_name: v${{ env.APP_VERSION_NAME }}
           name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
           body: |
-            В окне плейлистов мини-плеера можно удалить текущий трек из выбранного плейлиста. Удаление затрагивает только запись в этом плейлисте: сам аудиофайл и его копии в других плейлистах сохраняются.
-            Дополнительное усиление громкости увеличено с +100% до +200% (до 300% общей громкости, 3x). Обновлены ползунок, аппаратные кнопки громкости, аудиоусилитель и индикатор.
+            Добавлен фирменный Chiyuri Blood Loader: эмблема заполняется кровавой текстурой по часовой стрелке с круговым прогрессом и световой волной. Индикатор применяется при запуске, сканировании медиатеки, поиске текстов и метаданных, а также при проверке и загрузке обновлений.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
