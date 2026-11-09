@@ -347,6 +347,7 @@ private fun AudioEffectsScreen(player: Player, modifier: Modifier = Modifier) {
 """,
     "mini-player playlist picker dialog"
 )
+m.write_text(s, encoding="utf-8")
 
 # Keep the Gradle fallback in sync with the next release.
 gradle = Path("app/build.gradle.kts")
