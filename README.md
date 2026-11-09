@@ -7,7 +7,7 @@
 Последний опубликованный релиз: **0.4.25**.
 
 - [Скачать APK 0.4.25](https://github.com/jugg037/ChiyuriPlayer-Releases/releases/download/v0.4.25/app-release.apk)
-- [Контрольная сумма SHA-256](https://github.com/jugg037/ChiyuriPlayer-Releases/releases/download/v0.4.24/ChiyuriPlayer-0.4.25.sha256)
+- [Контрольная сумма SHA-256](https://github.com/jugg037/ChiyuriPlayer-Releases/releases/download/v0.4.25/ChiyuriPlayer-0.4.25.sha256)
 - [Все релизы](https://github.com/jugg037/ChiyuriPlayer-Releases/releases)
 - [История изменений](CHANGELOG.md)
 
