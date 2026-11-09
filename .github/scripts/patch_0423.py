@@ -26,7 +26,6 @@ import android.graphics.BlurMaskFilter
 import android.graphics.LinearGradient
 import android.graphics.Paint as NativePaint
 import android.graphics.Path
-import android.graphics.Path as NativePath
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
@@ -43,11 +42,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 @Composable
@@ -69,6 +68,11 @@ fun BloodLoader(progress: Float? = null, modifier: Modifier = Modifier) {
         animationSpec = infiniteRepeatable(tween(1900, easing = LinearEasing), RepeatMode.Restart),
         label = "chiyuri-blood-rotation"
     )
+    val pulse by transition.animateFloat(
+        initialValue = 0.65f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(720), RepeatMode.Reverse),
+        label = "chiyuri-blood-wave-pulse"
+    )
     Canvas(modifier = modifier) {
         if (emblem == null || size.minDimension <= 0f) return@Canvas
         val dst = RectF(0f, 0f, size.width, size.height)
@@ -77,7 +81,8 @@ fun BloodLoader(progress: Float? = null, modifier: Modifier = Modifier) {
         val radius = kotlin.math.hypot(size.width, size.height) * 0.72f
         val indeterminate = progress == null
         val start = if (indeterminate) rotation - 90f else -90f
-        val sweep = if (indeterminate) 82f else ((progress?.coerceIn(0f, 1f) ?: 0f) * 360f)
+        val completedSegments = ((progress?.coerceIn(0f, 1f) ?: 0f) * 100f).roundToInt().coerceIn(0, 100)
+        val sweep = if (indeterminate) 82f else completedSegments * 3.6f
         val canvas = drawContext.canvas.nativeCanvas
         val base = NativePaint(NativePaint.ANTI_ALIAS_FLAG or NativePaint.FILTER_BITMAP_FLAG).apply { alpha = 235 }
         canvas.drawBitmap(emblem, null, dst, base)
@@ -112,8 +117,8 @@ fun BloodLoader(progress: Float? = null, modifier: Modifier = Modifier) {
             val y = cy + radius * sin(a).toFloat()
             val frontLayer = canvas.saveLayer(dst, null)
             val front = NativePaint(NativePaint.ANTI_ALIAS_FLAG).apply {
-                color = android.graphics.Color.argb(220, 255, 75, 105)
-                strokeWidth = (size.minDimension * 0.018f).coerceAtLeast(2f)
+                color = android.graphics.Color.argb((220f * pulse).toInt(), 255, 75, 105)
+                strokeWidth = (size.minDimension * (0.016f + 0.004f * pulse)).coerceAtLeast(2f)
                 strokeCap = NativePaint.Cap.ROUND
                 style = NativePaint.Style.STROKE
                 maskFilter = BlurMaskFilter((size.minDimension * 0.025f).coerceAtLeast(2f), BlurMaskFilter.Blur.NORMAL)
@@ -148,7 +153,7 @@ private fun createChiyuriBloodTexture(): Bitmap {
         val y = random.nextFloat() * 384f
         val length = 18f + random.nextFloat() * 105f
         val drift = -24f + random.nextFloat() * 48f
-        val path = NativePath().apply {
+        val path = Path().apply {
             moveTo(x, y)
             cubicTo(x + length * 0.28f, y + drift, x + length * 0.7f, y - drift * 0.4f, x + length, y + drift * 0.25f)
         }
@@ -221,7 +226,7 @@ s = s.replace("""CircularProgressIndicator(
                 )""", """BloodLoader(progress = null, modifier = Modifier.size(22.dp))""")
 if "CircularProgressIndicator(" in s:
     raise SystemExit("Unconverted lyrics progress indicator")
-lyrics.write_text(s.replace("import androidx.compose.material3.CircularProgressIndicator\n", ""), encoding="utf-8")
+lyrics.write_text(s.replace("import androidx.compose.material3.CircularProgressIndicator\n", "").replace("import androidx.compose.ui.Modifier\n", "import androidx.compose.ui.Modifier\nimport androidx.compose.foundation.layout.size\n"), encoding="utf-8")
 
 track = ROOT / "TrackDetailsComponents.kt"
 s = track.read_text(encoding="utf-8")
@@ -232,6 +237,9 @@ if "CircularProgressIndicator(" in s:
 track.write_text(s, encoding="utf-8")
 
 mini = ROOT / "LyricsMiniPanel.kt"
+mini_source = mini.read_text(encoding="utf-8")
+mini_source = mini_source.replace("import androidx.compose.foundation.layout.Column\n", "import androidx.compose.foundation.layout.Column\nimport androidx.compose.foundation.layout.Row\nimport androidx.compose.foundation.layout.size\n")
+mini.write_text(mini_source, encoding="utf-8")
 replace_once(mini,
     'lyrics == null && loading -> Text("Ищу текст и загружаю сохранённую версию…", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)',
     """lyrics == null && loading -> Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
