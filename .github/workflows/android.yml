@@ -2210,12 +2210,12 @@ jobs:
           grep -F 'private fun createChiyuriBloodTexture()' "$LOADER"
           grep -F 'RadialGradient' "$LOADER"
           grep -F 'smoothNoise' "$LOADER"
-          grep -F 'BloodLoader(progress = progress / 100f' app/src/main/java/com/chiyuri/player/AppUpdates.kt
+          grep -F 'progress = if (downloading) progress / 100f else null' app/src/main/java/com/chiyuri/player/AppUpdates.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/MainActivity.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsScreen.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsMiniPanel.kt
-          grep -F 'orElse("335")' app/build.gradle.kts
+          grep -F 'orElse("336")' app/build.gradle.kts
           echo "Original PNG alpha-masked blood texture, clockwise loader and all integrations verified."
 
       - name: Full pre-build audit for v0.5.0
