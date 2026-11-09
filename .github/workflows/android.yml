@@ -16,6 +16,7 @@ on:
       - ".github/scripts/patch_0422.py"
       - ".github/scripts/patch_0423.py"
       - ".github/scripts/patch_0424.py"
+      - ".github/scripts/patch_0425.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
@@ -34,8 +35,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.25"
-      APP_VERSION_CODE: "335"
+      APP_VERSION_NAME: "0.5.0"
+      APP_VERSION_CODE: "336"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2191,6 +2192,9 @@ jobs:
       - name: Correct Blood Loader to use the original artwork
         run: python3 .github/scripts/patch_0424.py
 
+      - name: Apply v0.5.0 update center and mini-player refinements
+        run: python3 .github/scripts/patch_0425.py
+
       - name: Verify Chiyuri Blood Loader integrations and assets
         run: |
           set -eu
@@ -2213,6 +2217,27 @@ jobs:
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsMiniPanel.kt
           grep -F 'orElse("335")' app/build.gradle.kts
           echo "Original PNG alpha-masked blood texture, clockwise loader and all integrations verified."
+
+      - name: Full pre-build audit for v0.5.0
+        run: |
+          set -eu
+          MINI=app/src/main/java/com/chiyuri/player/LyricsMiniPanel.kt
+          UPDATES=app/src/main/java/com/chiyuri/player/AppUpdates.kt
+          LOADER=app/src/main/java/com/chiyuri/player/BloodLoadingIndicator.kt
+          test -s app/src/main/res/drawable-nodpi/chiyuri_emblem.png
+          grep -F 'R.drawable.chiyuri_emblem' "$UPDATES"
+          grep -F 'ContentScale.Fit' "$UPDATES"
+          grep -F 'CURRENT_VERSION_CODE' "$UPDATES"
+          grep -F 'BloodLoader(' "$UPDATES"
+          ! grep -F 'LyricsRepository.search(' "$MINI"
+          grep -F 'TrackMetadataRepository.loadOverride(context, uri)' "$MINI"
+          grep -F 'TrackMetadataRepository.readEmbeddedLyricsResult(context, uri)' "$MINI"
+          grep -F '0xFFFF263F.toInt()' "$LOADER"
+          grep -F '0xFF240008.toInt()' "$LOADER"
+          grep -F '0x66FF1E36' "$LOADER"
+          grep -F 'orElse("336")' app/build.gradle.kts
+          grep -F 'Установлена версия " + AppUpdates.CURRENT_VERSION + " - " + AppUpdates.CURRENT_VERSION_CODE' "$UPDATES"
+          echo "PASS: emblem, centered fit layout, dark scarlet texture, visual progress, no mini-player internet lookup and versionName-versionCode."
 
       - name: Verify embedded background asset from 0.4.15
         run: |
@@ -2407,7 +2432,10 @@ jobs:
           tag_name: v${{ env.APP_VERSION_NAME }}
           name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
           body: |
-            Исправлен Chiyuri Blood Loader: используется исходная PNG-эмблема без перерисовки, неоднородная кровавая текстура с бликами накладывается только на непрозрачные элементы; сохранены круговое заполнение по часовой стрелке и световая волна.
+            Центр обновлений: исходная эмблема расположена по центру с масштабированием Fit и используется как фон визуального индикатора загрузки.
+            Текстура крови переработана в алую, тёмную, неоднородную с прожилками, каплями и бликами; круговое заполнение и световая волна сохранены.
+            При раскрытии мини-плеера отключён автоматический поиск текстов в интернете: отображаются только встроенные тексты и данные, сохранённые редактором.
+            Версия приложения отображается в формате «версия приложения - versionCode»: 0.5.0 - 336.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
