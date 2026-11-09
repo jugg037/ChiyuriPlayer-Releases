@@ -9,7 +9,7 @@ if s.count(old) != 1:
     raise SystemExit("Expected automatic lyrics network search anchor not found exactly once")
 s = s.replace(old, "embeddedResult")
 s = s.replace("Ищу текст и загружаю сохранённую версию…", "Загружаю текст из файла и сохранённых данных…")
-s = s.replace("    val durationMs = player.duration.coerceAtLeast(0L)\\n", "")
+s = "\n".join(line for line in s.splitlines() if "val durationMs = player.duration.coerceAtLeast(0L)" not in line)
 s = s.replace("LaunchedEffect(uri, title, artist, durationMs)", "LaunchedEffect(uri, title, artist)")
 if "LyricsRepository.search(" in s:
     raise SystemExit("Automatic internet lyrics search remains in mini-player")
