@@ -12,6 +12,7 @@ on:
       - ".github/scripts/patch_0418.py"
       - ".github/scripts/patch_0419.py"
       - ".github/scripts/patch_0420.py"
+      - ".github/scripts/patch_0421.py"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
       - ".github/assets/chiyuri_background.webp.b64"
@@ -29,8 +30,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.21"
-      APP_VERSION_CODE: "331"
+      APP_VERSION_NAME: "0.4.22"
+      APP_VERSION_CODE: "332"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2118,6 +2119,25 @@ jobs:
           test -s app/src/test/java/com/chiyuri/player/ArtworkDecoderTest.kt
           echo "0.4.20 bounded artwork, safe installer, queue restore, lyric cache and Gradle fallback verified."
 
+      - name: Apply mini-player playlist picker 0.4.22
+        run: python3 .github/scripts/patch_0421.py
+
+      - name: Verify mini-player playlist picker and reactive playlist screen
+        run: |
+          set -eu
+          MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
+          REPO=app/src/main/java/com/chiyuri/player/PlaylistRepository.kt
+          grep -F 'Icons.Default.PlaylistAdd' "$MAIN"
+          grep -F 'Добавить в плейлист' "$MAIN"
+          grep -F 'Создать и добавить трек' "$MAIN"
+          grep -F 'FavoriteTracksStore.toggle(context, uri)' "$MAIN"
+          grep -F 'val playlistRevision by PlaylistRepository.revision.collectAsState()' "$MAIN"
+          grep -F 'internal val revision = MutableStateFlow(0L)' "$REPO"
+          grep -F 'revision.value = revision.value + 1L' "$REPO"
+          test -s app/src/test/java/com/chiyuri/player/PlaylistNameValidationTest.kt
+          grep -F 'orElse("332")' app/build.gradle.kts
+          echo "Mini-player favorite/playlist actions, create-and-add flow and live playlist refresh verified."
+
       - name: Verify embedded background asset from 0.4.15
         run: |
           set -eu
@@ -2321,6 +2341,7 @@ jobs:
             Android Lint и unit-тесты обязательны; CI запрещает сборку/публикацию из устаревшего коммита main.
             Версия сборки: versionCode ${{ env.APP_VERSION_CODE }}.
             Сохранены внешние субтитры, выделение текущего трека и автоматическое позиционирование очереди.
+            Добавлены кнопки избранного и добавления текущего трека в плейлист в мини-плеере; можно выбрать существующий плейлист или создать новый с одновременным добавлением трека. Список и открытое содержимое плейлистов обновляются автоматически.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
