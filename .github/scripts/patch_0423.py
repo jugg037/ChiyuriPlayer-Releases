@@ -216,6 +216,10 @@ replace_once(main,
         if (permissionDenied) {
             Text(""",
     "media library scanning")
+replace_once(main,
+    "import androidx.compose.ui.Modifier\n",
+    "import androidx.compose.ui.Modifier\nimport androidx.compose.ui.zIndex\n",
+    "buffer overlay z-index import")
 
 replace_once(main,
     "    var playing by remember { mutableStateOf(player.isPlaying) }\n    var playbackPosition",
@@ -233,7 +237,7 @@ replace_once(main,
     "    Box(Modifier.fillMaxSize()) {\n    if (isVideoFullscreen) {",
     """    Box(Modifier.fillMaxSize()) {
     if (isBuffering && player.playWhenReady && currentMediaUri?.let { Uri.parse(it).scheme in setOf("http", "https") } == true) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.22f)).zIndex(5f), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 BloodLoader(progress = null, modifier = Modifier.size(76.dp))
                 Text("Буферизация сетевого потока…", color = Color.White)
