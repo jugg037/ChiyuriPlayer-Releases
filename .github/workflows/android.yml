@@ -15,6 +15,8 @@ on:
       - ".github/scripts/patch_0421.py"
       - ".github/scripts/patch_0422.py"
       - ".github/scripts/patch_0423.py"
+      - ".github/scripts/patch_0424.py"
+      - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
       - ".github/assets/chiyuri_background.webp.b64"
@@ -32,8 +34,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.4.24"
-      APP_VERSION_CODE: "334"
+      APP_VERSION_NAME: "0.4.25"
+      APP_VERSION_CODE: "335"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2186,22 +2188,31 @@ jobs:
       - name: Apply Chiyuri Blood Loader 0.4.24
         run: python3 .github/scripts/patch_0423.py
 
+      - name: Correct Blood Loader to use the original artwork
+        run: python3 .github/scripts/patch_0424.py
+
       - name: Verify Chiyuri Blood Loader integrations and assets
         run: |
           set -eu
           LOADER=app/src/main/java/com/chiyuri/player/BloodLoadingIndicator.kt
           test -s "$LOADER"
-          test -s app/src/main/res/drawable/chiyuri_emblem.xml
+          test -s app/src/main/res/drawable-nodpi/chiyuri_emblem.png
+          test ! -e app/src/main/res/drawable/chiyuri_emblem.xml
+          test "$(wc -c < app/src/main/res/drawable-nodpi/chiyuri_emblem.png)" -gt 800000
+          grep -F 'R.drawable.chiyuri_emblem' "$LOADER"
           grep -F 'rotation - 90f' "$LOADER"
           grep -F 'progress?.coerceIn(0f, 1f)' "$LOADER"
           grep -F 'PorterDuff.Mode.DST_IN' "$LOADER"
+          grep -F 'private fun createChiyuriBloodTexture()' "$LOADER"
+          grep -F 'RadialGradient' "$LOADER"
+          grep -F 'smoothNoise' "$LOADER"
           grep -F 'BloodLoader(progress = progress / 100f' app/src/main/java/com/chiyuri/player/AppUpdates.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/MainActivity.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsScreen.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsMiniPanel.kt
-          grep -F 'orElse("334")' app/build.gradle.kts
-          echo "Startup, media scan, metadata, lyrics and update-center loaders verified."
+          grep -F 'orElse("335")' app/build.gradle.kts
+          echo "Original PNG alpha-masked blood texture, clockwise loader and all integrations verified."
 
       - name: Verify embedded background asset from 0.4.15
         run: |
@@ -2396,7 +2407,7 @@ jobs:
           tag_name: v${{ env.APP_VERSION_NAME }}
           name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
           body: |
-            Добавлен фирменный Chiyuri Blood Loader: эмблема заполняется кровавой текстурой по часовой стрелке с круговым прогрессом и световой волной. Индикатор применяется при запуске, сканировании медиатеки, поиске текстов и метаданных, а также при проверке и загрузке обновлений.
+            Исправлен Chiyuri Blood Loader: используется исходная PNG-эмблема без перерисовки, неоднородная кровавая текстура с бликами накладывается только на непрозрачные элементы; сохранены круговое заполнение по часовой стрелке и световая волна.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
