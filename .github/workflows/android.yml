@@ -2124,18 +2124,35 @@ jobs:
 
       - name: Verify mini-player playlist picker and reactive playlist screen
         run: |
-          set -eu
-          MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
-          REPO=app/src/main/java/com/chiyuri/player/PlaylistRepository.kt
-          grep -F 'Icons.Default.PlaylistAdd' "$MAIN"
-          grep -F 'Добавить в плейлист' "$MAIN"
-          grep -F 'Создать и добавить трек' "$MAIN"
-          grep -F 'FavoriteTracksStore.toggle(context, uri)' "$MAIN"
-          grep -F 'val playlistRevision by PlaylistRepository.revision.collectAsState()' "$MAIN"
-          grep -F 'internal val revision = MutableStateFlow(0L)' "$REPO"
-          grep -F 'revision.value = revision.value + 1L' "$REPO"
-          test -s app/src/test/java/com/chiyuri/player/PlaylistNameValidationTest.kt
-          grep -F 'orElse("332")' app/build.gradle.kts
+          python3 - <<'PY'
+          from pathlib import Path
+          checks = {
+              "app/src/main/java/com/chiyuri/player/MainActivity.kt": [
+                  "Icons.Default.PlaylistAdd",
+                  "Добавить в плейлист",
+                  "Создать и добавить трек",
+                  "FavoriteTracksStore.toggle(context, uri)",
+                  "val playlistRevision by PlaylistRepository.revision.collectAsState()",
+              ],
+              "app/src/main/java/com/chiyuri/player/PlaylistRepository.kt": [
+                  "internal val revision = MutableStateFlow(0L)",
+                  "revision.value = revision.value + 1L",
+              ],
+              "app/build.gradle.kts": [
+                  'orElse("332")',
+              ],
+          }
+          for filename, markers in checks.items():
+              source = Path(filename).read_text(encoding="utf-8")
+              for marker in markers:
+                  if marker not in source:
+                      raise SystemExit(f"Missing expected playlist feature marker in {filename}: {marker}")
+                  print(f"OK {filename}: {marker}")
+          test_file = Path("app/src/test/java/com/chiyuri/player/PlaylistNameValidationTest.kt")
+          if not test_file.is_file() or test_file.stat().st_size == 0:
+              raise SystemExit("Playlist name validation unit test is missing.")
+          print("OK PlaylistNameValidationTest.kt exists.")
+          PY
           echo "Mini-player favorite/playlist actions, create-and-add flow and live playlist refresh verified."
 
       - name: Verify embedded background asset from 0.4.15
