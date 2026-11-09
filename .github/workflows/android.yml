@@ -2227,6 +2227,7 @@ jobs:
           test -s app/src/main/res/drawable-nodpi/chiyuri_emblem.png
           grep -F 'R.drawable.chiyuri_emblem' "$UPDATES"
           grep -F 'ContentScale.Fit' "$UPDATES"
+          grep -F 'Modifier.size(190.dp)' "$UPDATES"
           grep -F 'CURRENT_VERSION_CODE' "$UPDATES"
           grep -F 'BloodLoader(' "$UPDATES"
           ! grep -F 'LyricsRepository.search(' "$MINI"
