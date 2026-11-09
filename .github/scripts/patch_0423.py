@@ -226,9 +226,10 @@ lyrics.write_text(s.replace("import androidx.compose.material3.CircularProgressI
 track = ROOT / "TrackDetailsComponents.kt"
 s = track.read_text(encoding="utf-8")
 s = s.replace("CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)", "BloodLoader(progress = null, modifier = Modifier.size(20.dp))")
-if "CircularProgressIndicator" in s:
+s = s.replace("import androidx.compose.material3.CircularProgressIndicator\n", "")
+if "CircularProgressIndicator(" in s:
     raise SystemExit("Unconverted metadata progress indicator")
-track.write_text(s.replace("import androidx.compose.material3.CircularProgressIndicator\n", ""), encoding="utf-8")
+track.write_text(s, encoding="utf-8")
 
 mini = ROOT / "LyricsMiniPanel.kt"
 replace_once(mini,
