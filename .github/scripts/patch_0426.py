@@ -27,7 +27,7 @@ elif 'versionName = "0.5.1"' in s:
  s=s.replace('versionName = "0.5.1"','versionName = "0.5.2"',1)
 elif 'versionName = "0.5.2"' not in s:
  raise SystemExit("Unexpected Gradle versionName; expected source baseline or 0.5.0/0.5.1/0.5.2")
-s=s.replace('orElse("336")','orElse("338")')
+s=s.replace('orElse("337")','orElse("338")')
 write(p,s)
 wrapper=ROOT/"gradle/wrapper/gradle-wrapper.properties"
 if wrapper.exists(): write(wrapper,once(read(wrapper),"gradle-9.3.1-bin.zip","gradle-9.9.0-bin.zip","Gradle wrapper"))
