@@ -62,6 +62,8 @@ s=once(s,"var queueVersion by remember { mutableStateOf(0) }","var queueVersion 
 p=BASE/"BloodLoadingIndicator.kt"; s=imp(read(p),"import androidx.core.graphics.createBitmap"); s=imp(s,"import androidx.core.graphics.withClip")
 s=once(s,"fun BloodLoader(progress: Float? = null, modifier: Modifier = Modifier) {","fun BloodLoader(modifier: Modifier = Modifier, progress: Float? = null) {","BloodLoader signature")
 s=s.replace("Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)","createBitmap(512, 512, Bitmap.Config.ARGB_8888)").replace("Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)","createBitmap(width, height, Bitmap.Config.ARGB_8888)")
+s=once(s,"            canvas.save()\n            canvas.clipPath(wedge)\n            val layer = canvas.saveLayer(dst, null)\n            canvas.drawBitmap(blood, null, dst, NativePaint(NativePaint.ANTI_ALIAS_FLAG or NativePaint.FILTER_BITMAP_FLAG).apply { alpha = 226 })\n            val mask = NativePaint(NativePaint.ANTI_ALIAS_FLAG or NativePaint.FILTER_BITMAP_FLAG).apply {\n                xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)\n            }\n            canvas.drawBitmap(emblem, null, dst, mask)\n            mask.xfermode = null\n            canvas.restoreToCount(layer)\n            canvas.restore()",
+ "            canvas.withClip(wedge) {\n                val layer = saveLayer(dst, null)\n                drawBitmap(blood, null, dst, NativePaint(NativePaint.ANTI_ALIAS_FLAG or NativePaint.FILTER_BITMAP_FLAG).apply { alpha = 226 })\n                val mask = NativePaint(NativePaint.ANTI_ALIAS_FLAG or NativePaint.FILTER_BITMAP_FLAG).apply {\n                    xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)\n                }\n                drawBitmap(emblem, null, dst, mask)\n                mask.xfermode = null\n                restoreToCount(layer)\n            }","Canvas.withClip blood mask")
 s=once(s,"            canvas.save()\n            canvas.clipPath(wedge)\n            canvas.drawBitmap(emblem, null, dst, NativePaint(NativePaint.ANTI_ALIAS_FLAG or NativePaint.FILTER_BITMAP_FLAG).apply { alpha = 62 })\n            canvas.restore()",
  "            canvas.withClip(wedge) {\n                drawBitmap(emblem, null, dst, NativePaint(NativePaint.ANTI_ALIAS_FLAG or NativePaint.FILTER_BITMAP_FLAG).apply { alpha = 62 })\n            }","Canvas.withClip"); write(p,s)
 def replace_file(name,old,new,label,imports=("import androidx.core.content.edit",)):
@@ -164,22 +166,35 @@ adaptive='''<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/and
 '''
 write(new/"ic_launcher.xml",adaptive)
 write(new/"ic_launcher_round.xml",adaptive)
-# Fix legacy launcher fallback silhouettes at all densities.
-for density in ["mipmap-mdpi","mipmap-hdpi","mipmap-xhdpi","mipmap-xxhdpi","mipmap-xxxhdpi"]:
- folder=RES/density; square=folder/"ic_launcher.png"; round_icon=folder/"ic_launcher_round.png"
- if not square.exists() or not round_icon.exists(): raise SystemExit(f"Missing icons in {folder}")
- src=Image.open(square).convert("RGBA"); size=src.size[0]
- inner=src.resize((round(size*.78),round(size*.78)),Image.Resampling.LANCZOS)
- padded=Image.new("RGBA",(size,size),(0,0,0,0)); padded.alpha_composite(inner,((size-inner.width)//2,(size-inner.height)//2)); padded.save(square)
- circ=Image.open(round_icon).convert("RGBA").resize((size,size),Image.Resampling.LANCZOS)
- mask=Image.new("L",(size,size),0); ImageDraw.Draw(mask).ellipse((1,1,size-2,size-2),fill=255)
- circ.putalpha(ImageChops.multiply(circ.getchannel("A"),mask)); circ.save(round_icon)
-# Adaptive-icon XML must reference a dedicated foreground resource, never itself.
+# Build adaptive icon foreground and monochrome layers, then remove obsolete density PNGs.
 foreground=RES/"drawable-nodpi/chiyuri_launcher_foreground.png"
-Image.open(RES/"mipmap-xxxhdpi/ic_launcher.png").convert("RGBA").save(foreground)
-for icon in [RES/"mipmap-anydpi/ic_launcher.xml",RES/"mipmap-anydpi/ic_launcher_round.xml"]:
- if icon.exists():
-  write(icon,read(icon).replace("@mipmap/ic_launcher","@drawable/chiyuri_launcher_foreground"))
+source_icon=Image.open(RES/"mipmap-xxxhdpi/ic_launcher.png").convert("RGBA")
+source_icon.save(foreground)
+mono=Image.new("RGBA",source_icon.size,(0,0,0,0))
+mono_pixels=[]
+for r,g,b,a in source_icon.getdata():
+ luminance=0.2126*r+0.7152*g+0.0722*b
+ alpha=max(0,min(255,int((luminance-48)*3.0)))
+ alpha=alpha*a//255
+ mono_pixels.append((255,255,255,alpha))
+mono.putdata(mono_pixels)
+mono.save(RES/"drawable-nodpi/chiyuri_launcher_monochrome.png")
+adaptive='''<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@android:color/black" />
+    <foreground android:drawable="@drawable/chiyuri_launcher_foreground" />
+    <monochrome android:drawable="@drawable/chiyuri_launcher_monochrome" />
+</adaptive-icon>
+'''
+new.mkdir(parents=True,exist_ok=True)
+write(new/"ic_launcher.xml",adaptive)
+write(new/"ic_launcher_round.xml",adaptive)
+for density in ["mipmap-mdpi","mipmap-hdpi","mipmap-xhdpi","mipmap-xxhdpi","mipmap-xxxhdpi"]:
+ folder=RES/density
+ for name in ["ic_launcher.png","ic_launcher_round.png"]:
+  icon=folder/name
+  if icon.exists(): icon.unlink()
+ try: folder.rmdir()
+ except OSError: pass
 # Update Gradle wrapper inside the source archive.
 archive=ROOT/"ChiyuriPlayer-0.2.0-source-prep.zip"
 if archive.exists():
