@@ -80,7 +80,67 @@ replace_file("TrackArtworkBackdrop.kt",'context.getSharedPreferences(PREFS, andr
 replace_file("TrackMetadataRepository.kt",'prefs.edit().putString("items", all.toString()).apply()','prefs.edit { putString("items", all.toString()) }',"metadata prefs",("import androidx.core.content.edit","import androidx.core.net.toUri"))
 for name in ["LocalMediaRepository.kt","PlaybackQueueStore.kt","TrackMetadataRepository.kt"]:
  p=BASE/name; s=read(p).replace("Uri.parse(uri)","uri.toUri()").replace("Uri.parse(metadata.artworkUrl)","metadata.artworkUrl.toUri()"); write(p,s)
-p=BASE/"NetworkStreamCard.kt"; s=imp(read(p),"import androidx.core.net.toUri"); write(p,once(s,"Uri.parse(address.trim())","address.trim().toUri()","network URI"))
+p=BASE/"NetworkStreamCard.kt"; s=imp(read(p),"import androidx.core.net.toUri")
+for x in ["import android.os.Build","import androidx.activity.compose.rememberLauncherForActivityResult","import androidx.activity.result.contract.ActivityResultContracts","import androidx.compose.ui.platform.LocalContext","import androidx.core.content.ContextCompat"]: s=imp(s,x)
+old_fun='''@Composable
+internal fun NetworkStreamCard(player: Player) {
+    var address by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }'''
+new_fun='''@Composable
+internal fun NetworkStreamCard(player: Player) {
+    var address by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var pendingLocalUri by remember { mutableStateOf<Uri?>(null) }
+    val context = LocalContext.current
+    fun startPlayback(uri: Uri) {
+        runCatching {
+            player.setMediaItem(MediaItem.fromUri(uri))
+            player.prepare()
+            player.play()
+            error = null
+        }.onFailure { error = "Не удалось открыть поток: ${it.localizedMessage ?: \\"неизвестная ошибка\\"}" }
+    }
+    val localNetworkPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val pending = pendingLocalUri
+        pendingLocalUri = null
+        if (granted && pending != null) startPlayback(pending)
+        else if (pending != null) error = "Для доступа к локальному потоку разреши доступ к локальной сети в настройках Android."
+    }'''
+s=once(s,old_fun,new_fun,"NetworkStreamCard permission launcher")
+old_click='''                    } else {
+                        runCatching {
+                            player.setMediaItem(MediaItem.fromUri(uri))
+                            player.prepare()
+                            player.play()
+                            error = null
+                        }.onFailure {
+                            error = "Не удалось открыть поток: ${it.localizedMessage ?: \\"неизвестная ошибка\\"}"
+                        }
+                    }'''
+new_click='''                    } else if (Build.VERSION.SDK_INT >= 37 && requiresLocalNetworkPermission(uri.host.orEmpty()) &&
+                        ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_LOCAL_NETWORK") != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        pendingLocalUri = uri
+                        localNetworkPermission.launch("android.permission.ACCESS_LOCAL_NETWORK")
+                    } else {
+                        startPlayback(uri)
+                    }'''
+s=once(s,old_click,new_click,"NetworkStreamCard permission request")
+s += '''
+private fun requiresLocalNetworkPermission(hostValue: String): Boolean {
+    val host = hostValue.trim().trim('[', ']').lowercase()
+    if (host == "localhost" || host.endsWith(".local") || host.endsWith(".lan") ||
+        host.endsWith(".home") || host.endsWith(".internal") || !host.contains('.')) return true
+    val parts = host.split('.').mapNotNull { it.toIntOrNull() }
+    if (parts.size == 4 && parts.all { it in 0..255 }) {
+        val a = parts[0]; val b = parts[1]
+        return a == 10 || a == 127 || (a == 192 && b == 168) ||
+            (a == 172 && b in 16..31) || (a == 169 && b == 254) ||
+            (a == 100 && b in 64..127)
+    }
+    return host == "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80:")
+}
+'''
+write(p,s)
 p=BASE/"TrackArtworkBackdrop.kt"; s=read(p); s=once(s,"Bitmap.createScaledBitmap(source, 40, 40, true)","source.scale(40, 40)","bitmap scale"); s=once(s,"sample.getPixel(x, y)","sample[x, y]","bitmap pixel"); write(p,s)
 # Remove unused color, retain Media3 resources resolved by library resource name.
 p=RES/"values/colors.xml"
