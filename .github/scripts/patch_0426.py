@@ -156,8 +156,14 @@ if old.exists():
   if target.exists(): raise SystemExit(f"Icon target exists: {target}")
   shutil.move(str(f),str(target))
  old.rmdir()
-for icon in [new/"ic_launcher.xml",new/"ic_launcher_round.xml"]:
- if icon.exists(): write(icon,read(icon).replace("@color/icon_background","@android:color/black"))
+new.mkdir(parents=True,exist_ok=True)
+adaptive='''<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@android:color/black" />
+    <foreground android:drawable="@drawable/chiyuri_launcher_foreground" />
+</adaptive-icon>
+'''
+write(new/"ic_launcher.xml",adaptive)
+write(new/"ic_launcher_round.xml",adaptive)
 # Fix legacy launcher fallback silhouettes at all densities.
 for density in ["mipmap-mdpi","mipmap-hdpi","mipmap-xhdpi","mipmap-xxhdpi","mipmap-xxxhdpi"]:
  folder=RES/density; square=folder/"ic_launcher.png"; round_icon=folder/"ic_launcher_round.png"
