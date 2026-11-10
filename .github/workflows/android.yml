@@ -18,6 +18,7 @@ on:
       - ".github/scripts/patch_0424.py"
       - ".github/scripts/patch_0425.py"
       - ".github/scripts/patch_0426.py"
+      - ".github/scripts/patch_0427.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
@@ -36,8 +37,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.5.1"
-      APP_VERSION_CODE: "337"
+      APP_VERSION_NAME: "0.5.2"
+      APP_VERSION_CODE: "338"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2204,6 +2205,19 @@ jobs:
           set -o pipefail
           python3 -u .github/scripts/patch_0426.py 2>&1 | tee patch_0426.log
 
+      - name: Fix Compose adaptive icon rendering crash
+        run: |
+          set -o pipefail
+          python3 -u .github/scripts/patch_0427.py 2>&1 | tee patch_0427.log
+
+      - name: Verify Compose icon uses raster drawable
+        run: |
+          set -eu
+          grep -F 'painterResource(com.chiyuri.player.R.drawable.chiyuri_launcher_foreground)' /tmp/chiyuri-source/ChiyuriPlayer-main/app/src/main/java/com/chiyuri/player/MainActivity.kt >/dev/null || true
+          grep -F 'painterResource(com.chiyuri.player.R.drawable.chiyuri_launcher_foreground)' app/src/main/java/com/chiyuri/player/MainActivity.kt
+          test -s app/src/main/res/drawable-nodpi/chiyuri_launcher_foreground.png
+          ! grep -F 'painterResource(com.chiyuri.player.R.mipmap.ic_launcher)' app/src/main/java/com/chiyuri/player/MainActivity.kt
+
       - name: Upload patch remediation diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -2528,10 +2542,8 @@ jobs:
           tag_name: v${{ env.APP_VERSION_NAME }}
           name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
           body: |
-            Центр обновлений: исходная эмблема расположена по центру с масштабированием Fit и используется как фон визуального индикатора загрузки.
-            Текстура крови переработана в алую, тёмную, неоднородную с прожилками, каплями и бликами; круговое заполнение и световая волна сохранены.
-            При раскрытии мини-плеера отключён автоматический поиск текстов в интернете: отображаются только встроенные тексты и данные, сохранённые редактором.
-            Версия приложения отображается в формате «версия приложения - versionCode»: 0.5.1 - 337.
+            Исправлено аварийное завершение интерфейса: Compose теперь загружает PNG foreground эмблемы вместо Adaptive Icon XML.
+            Версия приложения отображается в формате «версия приложения - versionCode»: 0.5.2 - 338.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
