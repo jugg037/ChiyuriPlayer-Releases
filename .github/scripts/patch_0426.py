@@ -137,7 +137,8 @@ private fun requiresLocalNetworkPermission(hostValue: String): Boolean {
             (a == 172 && b in 16..31) || (a == 169 && b == 254) ||
             (a == 100 && b in 64..127)
     }
-    return host == "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80:")
+    if (host.contains(':')) return host == "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80:")
+    return false
 }
 '''
 write(p,s)
@@ -166,6 +167,12 @@ for density in ["mipmap-mdpi","mipmap-hdpi","mipmap-xhdpi","mipmap-xxhdpi","mipm
  circ=Image.open(round_icon).convert("RGBA").resize((size,size),Image.Resampling.LANCZOS)
  mask=Image.new("L",(size,size),0); ImageDraw.Draw(mask).ellipse((1,1,size-2,size-2),fill=255)
  circ.putalpha(ImageChops.multiply(circ.getchannel("A"),mask)); circ.save(round_icon)
+# Adaptive-icon XML must reference a dedicated foreground resource, never itself.
+foreground=RES/"drawable-nodpi/chiyuri_launcher_foreground.png"
+Image.open(RES/"mipmap-xxxhdpi/ic_launcher.png").convert("RGBA").save(foreground)
+for icon in [RES/"mipmap-anydpi/ic_launcher.xml",RES/"mipmap-anydpi/ic_launcher_round.xml"]:
+ if icon.exists():
+  write(icon,read(icon).replace("@mipmap/ic_launcher","@drawable/chiyuri_launcher_foreground"))
 # Update Gradle wrapper inside the source archive.
 archive=ROOT/"ChiyuriPlayer-0.2.0-source-prep.zip"
 if archive.exists():
