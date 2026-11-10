@@ -98,7 +98,7 @@ internal fun NetworkStreamCard(player: Player) {
             player.prepare()
             player.play()
             error = null
-        }.onFailure { error = "Не удалось открыть поток: ${it.localizedMessage ?: \\"неизвестная ошибка\\"}" }
+        }.onFailure { error = "Не удалось открыть поток: ${it.localizedMessage ?: "неизвестная ошибка"}" }
     }
     val localNetworkPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         val pending = pendingLocalUri
@@ -114,7 +114,7 @@ old_click='''                    } else {
                             player.play()
                             error = null
                         }.onFailure {
-                            error = "Не удалось открыть поток: ${it.localizedMessage ?: \\"неизвестная ошибка\\"}"
+                            error = "Не удалось открыть поток: ${it.localizedMessage ?: "неизвестная ошибка"}"
                         }
                     }'''
 new_click='''                    } else if (Build.VERSION.SDK_INT >= 37 && requiresLocalNetworkPermission(uri.host.orEmpty()) &&
