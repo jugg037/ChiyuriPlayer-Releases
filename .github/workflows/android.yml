@@ -2258,20 +2258,24 @@ jobs:
           grep -F 'Установлена версия " + AppUpdates.CURRENT_VERSION + " - " + AppUpdates.CURRENT_VERSION_CODE' "$UPDATES"
           echo "PASS: emblem, centered fit layout, dark scarlet texture, visual progress, no mini-player internet lookup and versionName-versionCode."
 
-      - name: Verify Android 16, security, KTX and resource remediation
+      - name: Verify Android 17, security, KTX and resource remediation
         run: |
           set -eu
           GRADLE=app/build.gradle.kts
           MANIFEST=app/src/main/AndroidManifest.xml
           MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
           PLAYBACK=app/src/main/java/com/chiyuri/player/PlaybackService.kt
-          grep -F 'targetSdk = 36' "$GRADLE"
+          grep -F 'compileSdk = 37' "$GRADLE"
+          grep -F 'targetSdk = 37' "$GRADLE"
           grep -F 'abiFilters += listOf("arm64-v8a", "x86_64")' "$GRADLE"
           grep -F 'lifecycle-runtime-ktx:2.11.0' "$GRADLE"
           grep -F 'work-runtime-ktx:2.12.0' "$GRADLE"
           ! grep -F 'screenOrientation=' "$MANIFEST"
+          grep -F 'android.permission.ACCESS_LOCAL_NETWORK' "$MANIFEST"
           grep -F 'tools:ignore="ExportedService"' "$MANIFEST"
           grep -F 'controllerInfo.isTrusted' "$PLAYBACK"
+          grep -F 'requiresLocalNetworkPermission' app/src/main/java/com/chiyuri/player/NetworkStreamCard.kt
+          grep -F 'localNetworkPermission.launch("android.permission.ACCESS_LOCAL_NETWORK")' app/src/main/java/com/chiyuri/player/NetworkStreamCard.kt
           grep -F 'WindowCompat.setDecorFitsSystemWindows(window, false)' "$MAIN"
           test -d app/src/main/res/mipmap-anydpi
           test ! -d app/src/main/res/mipmap-anydpi-v26
@@ -2281,7 +2285,7 @@ jobs:
           ! grep -R -E 'Uri\.parse\(|\.edit\(\)\.put|Bitmap\.createScaledBitmap|\.getPixel\(' app/src/main/java/com/chiyuri/player
           grep -F 'versionName = "0.5.1"' "$GRADLE"
           grep -F 'orElse("337")' "$GRADLE"
-          echo "Android 16 edge-to-edge, trusted media session, ABI, KTX, adaptive resources and version checks passed."
+          echo "Android 17 edge-to-edge, local-network permission, trusted media session, ABI, KTX and resources verified."
 
       - name: Verify embedded background asset from 0.4.15
         run: |
@@ -2372,7 +2376,7 @@ jobs:
           packages: platform-tools
 
       - name: Install Android SDK components
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+        run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -2467,8 +2471,8 @@ jobs:
         run: |
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
-          BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
+          "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose "$APK"
+          BADGING="$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK")"
           printf '%s\n' "$BADGING" | grep -F "package: name='com.chiyuri.player' versionCode='$APP_VERSION_CODE' versionName='$APP_VERSION_NAME'" >/dev/null || {
             echo "::error::APK manifest version does not match the single Gradle release version."
             printf '%s\n' "$BADGING" | grep "^package:"
