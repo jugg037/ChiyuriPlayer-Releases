@@ -2,16 +2,7 @@
 
 **ChiyuriPlayer** — Android-аудио- и видеоплеер. Этот публичный репозиторий используется для исходной сборки, документации и распространения релизов.
 
-## Актуальный релиз
-
-Последний опубликованный релиз: **0.5.1**.
-
-- [Скачать APK 0.5.1](https://github.com/jugg037/ChiyuriPlayer-Releases/releases/download/v0.5.1/app-release.apk)
-- [Контрольная сумма SHA-256](https://github.com/jugg037/ChiyuriPlayer-Releases/releases/download/v0.5.0/ChiyuriPlayer-0.5.1.sha256)
-- [Все релизы](https://github.com/jugg037/ChiyuriPlayer-Releases/releases)
-- [История изменений](CHANGELOG.md)
-
-Версия приложения в интерфейсе Центра обновлений берётся из Gradle BuildConfig (BuildConfig.VERSION_NAME / BuildConfig.VERSION_CODE), а не из отдельной вручную прописанной строки интерфейса. Версию сборки релиза задаёт конфигурация workflow.
+## Актуальный релиз 0.5.2
 
 ## Что входит в текущую работу
 
