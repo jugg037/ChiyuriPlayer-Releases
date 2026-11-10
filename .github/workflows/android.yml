@@ -2280,6 +2280,8 @@ jobs:
           test -d app/src/main/res/mipmap-anydpi
           test ! -d app/src/main/res/mipmap-anydpi-v26
           test -s app/src/main/res/values/keep.xml
+          test -s app/src/main/res/drawable-nodpi/chiyuri_launcher_foreground.png
+          grep -F '@drawable/chiyuri_launcher_foreground' app/src/main/res/mipmap-anydpi/ic_launcher.xml
           test ! -e app/src/main/res/values/colors.xml
           grep -F 'mutableIntStateOf(0)' "$MAIN"
           ! grep -R -E 'Uri\.parse\(|\.edit\(\)\.put|Bitmap\.createScaledBitmap|\.getPixel\(' app/src/main/java/com/chiyuri/player
