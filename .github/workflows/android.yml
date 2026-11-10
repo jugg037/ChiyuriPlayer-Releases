@@ -2260,7 +2260,8 @@ jobs:
 
       - name: Verify Android 17, security, KTX and resource remediation
         run: |
-          set -eu
+          exec > >(tee -a platform-audit.log) 2>&1
+          set -eux
           GRADLE=app/build.gradle.kts
           MANIFEST=app/src/main/AndroidManifest.xml
           MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
@@ -2288,6 +2289,15 @@ jobs:
           grep -F 'versionName = "0.5.1"' "$GRADLE"
           grep -F 'orElse("337")' "$GRADLE"
           echo "Android 17 edge-to-edge, local-network permission, trusted media session, ABI, KTX and resources verified."
+
+      - name: Upload platform audit diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChiyuriPlayer-platform-audit-${{ github.run_number }}
+          path: platform-audit.log
+          if-no-files-found: warn
+          retention-days: 3
 
       - name: Verify embedded background asset from 0.4.15
         run: |
