@@ -2247,7 +2247,7 @@ jobs:
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsScreen.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsMiniPanel.kt
-          grep -F 'orElse("337")' app/build.gradle.kts
+          grep -F 'orElse("338")' app/build.gradle.kts
           echo "Original PNG alpha-masked blood texture, clockwise loader and all integrations verified."
 
       - name: Full pre-build audit for v0.5.0
@@ -2268,7 +2268,7 @@ jobs:
           grep -F '0xFFFF263F.toInt()' "$LOADER"
           grep -F '0xFF240008.toInt()' "$LOADER"
           grep -F '0x66FF1E36' "$LOADER"
-          grep -F 'orElse("337")' app/build.gradle.kts
+          grep -F 'orElse("338")' app/build.gradle.kts
           grep -F 'Установлена версия " + AppUpdates.CURRENT_VERSION + " - " + AppUpdates.CURRENT_VERSION_CODE' "$UPDATES"
           echo "PASS: emblem, centered fit layout, dark scarlet texture, visual progress, no mini-player internet lookup and versionName-versionCode."
 
@@ -2303,8 +2303,8 @@ jobs:
           test ! -e app/src/main/res/values/colors.xml
           grep -F 'mutableIntStateOf(0)' "$MAIN"
           ! grep -R -E 'Uri\.parse\(|\.edit\(\)\.put|Bitmap\.createScaledBitmap|\.getPixel\(' app/src/main/java/com/chiyuri/player
-          grep -F 'versionName = "0.5.1"' "$GRADLE"
-          grep -F 'orElse("337")' "$GRADLE"
+          grep -F 'versionName = "0.5.2"' "$GRADLE"
+          grep -F 'orElse("338")' "$GRADLE"
           echo "Android 17 edge-to-edge, local-network permission, trusted media session, ABI, KTX and resources verified."
 
       - name: Upload platform audit diagnostics
