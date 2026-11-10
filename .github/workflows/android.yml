@@ -2463,7 +2463,7 @@ jobs:
           REPORT=app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt
           test -s "$REPORT"
           tail -n 1 "$REPORT"
-          grep -Eq "^0 errors, 0 warnings, 0 hints?$" "$REPORT" || {
+          grep -Eq "^(No issues found\\.?|0 errors, 0 warnings, 0 hints?)$" "$REPORT" || {
             echo "::error::Release blocked: Android Lint must report zero errors, warnings and hints."
             exit 1
           }
