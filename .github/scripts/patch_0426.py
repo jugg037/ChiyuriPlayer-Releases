@@ -15,10 +15,13 @@ p=ROOT/"app/build.gradle.kts"; s=read(p)
 for a,b,n in [
  ("targetSdk = 35","targetSdk = 36","target SDK"),
  ('versionCode = providers.gradleProperty("VERSION_CODE").orElse("336")','versionCode = providers.gradleProperty("VERSION_CODE").orElse("337")',"versionCode"),
- ('versionName = "0.5.0"','versionName = "0.5.1"',"versionName"),
  ('abiFilters += listOf("arm64-v8a")','abiFilters += listOf("arm64-v8a", "x86_64")',"ABI"),
  ("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0","androidx.lifecycle:lifecycle-runtime-ktx:2.11.0","Lifecycle KTX"),
  ("androidx.work:work-runtime-ktx:2.10.5","androidx.work:work-runtime-ktx:2.12.0","Work KTX")]: s=once(s,a,b,n)
+if 'versionName = "0.5.0"' in s:
+ s=s.replace('versionName = "0.5.0"','versionName = "0.5.1"',1)
+elif 'versionName = "0.5.1"' not in s:
+ raise SystemExit("Unexpected Gradle versionName; expected 0.5.0 or 0.5.1")
 write(p,s)
 wrapper=ROOT/"gradle/wrapper/gradle-wrapper.properties"
 if wrapper.exists(): write(wrapper,once(read(wrapper),"gradle-9.3.1-bin.zip","gradle-9.9.0-bin.zip","Gradle wrapper"))
