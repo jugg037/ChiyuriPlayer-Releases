@@ -17,6 +17,7 @@ on:
       - ".github/scripts/patch_0423.py"
       - ".github/scripts/patch_0424.py"
       - ".github/scripts/patch_0425.py"
+      - ".github/scripts/patch_0426.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
@@ -35,8 +36,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.5.0"
-      APP_VERSION_CODE: "336"
+      APP_VERSION_NAME: "0.5.1"
+      APP_VERSION_CODE: "337"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2195,6 +2196,12 @@ jobs:
       - name: Apply v0.5.0 update center and mini-player refinements
         run: python3 .github/scripts/patch_0425.py
 
+      - name: Install icon image processing dependency
+        run: python3 -m pip install --disable-pip-version-check Pillow==12.3.0
+
+      - name: Apply Android Lint and platform compatibility fixes
+        run: python3 .github/scripts/patch_0426.py
+
       - name: Verify Chiyuri Blood Loader integrations and assets
         run: |
           set -eu
@@ -2215,7 +2222,7 @@ jobs:
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsScreen.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsMiniPanel.kt
-          grep -F 'orElse("336")' app/build.gradle.kts
+          grep -F 'orElse("337")' app/build.gradle.kts
           echo "Original PNG alpha-masked blood texture, clockwise loader and all integrations verified."
 
       - name: Full pre-build audit for v0.5.0
@@ -2236,9 +2243,34 @@ jobs:
           grep -F '0xFFFF263F.toInt()' "$LOADER"
           grep -F '0xFF240008.toInt()' "$LOADER"
           grep -F '0x66FF1E36' "$LOADER"
-          grep -F 'orElse("336")' app/build.gradle.kts
+          grep -F 'orElse("337")' app/build.gradle.kts
           grep -F 'Установлена версия " + AppUpdates.CURRENT_VERSION + " - " + AppUpdates.CURRENT_VERSION_CODE' "$UPDATES"
           echo "PASS: emblem, centered fit layout, dark scarlet texture, visual progress, no mini-player internet lookup and versionName-versionCode."
+
+      - name: Verify Android 16, security, KTX and resource remediation
+        run: |
+          set -eu
+          GRADLE=app/build.gradle.kts
+          MANIFEST=app/src/main/AndroidManifest.xml
+          MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
+          PLAYBACK=app/src/main/java/com/chiyuri/player/PlaybackService.kt
+          grep -F 'targetSdk = 36' "$GRADLE"
+          grep -F 'abiFilters += listOf("arm64-v8a", "x86_64")' "$GRADLE"
+          grep -F 'lifecycle-runtime-ktx:2.11.0' "$GRADLE"
+          grep -F 'work-runtime-ktx:2.12.0' "$GRADLE"
+          ! grep -F 'screenOrientation=' "$MANIFEST"
+          grep -F 'tools:ignore="ExportedService"' "$MANIFEST"
+          grep -F 'controllerInfo.isTrusted' "$PLAYBACK"
+          grep -F 'WindowCompat.setDecorFitsSystemWindows(window, false)' "$MAIN"
+          test -d app/src/main/res/mipmap-anydpi
+          test ! -d app/src/main/res/mipmap-anydpi-v26
+          test -s app/src/main/res/values/keep.xml
+          test ! -e app/src/main/res/values/colors.xml
+          grep -F 'mutableIntStateOf(0)' "$MAIN"
+          ! grep -R -E 'Uri\.parse\(|\.edit\(\)\.put|Bitmap\.createScaledBitmap|\.getPixel\(' app/src/main/java/com/chiyuri/player
+          grep -F 'versionName = "0.5.1"' "$GRADLE"
+          grep -F 'orElse("337")' "$GRADLE"
+          echo "Android 16 edge-to-edge, trusted media session, ABI, KTX, adaptive resources and version checks passed."
 
       - name: Verify embedded background asset from 0.4.15
         run: |
@@ -2334,7 +2366,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "9.3.1"
+          gradle-version: "9.9.0"
 
       - name: Restore release signing key
         env:
@@ -2372,6 +2404,88 @@ jobs:
         run: |
           echo "::error::Android Lint must pass before an APK can be published."
           exit 1
+
+      - name: Require zero Android Lint findings
+        if: steps.android_lint.outcome == 'success'
+        run: |
+          set -eu
+          REPORT=app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt
+          test -s "$REPORT"
+          tail -n 1 "$REPORT"
+          grep -Eq '^0 errors, 0 warnings, 0 hints?
+      - name: Ensure source is still latest main before building
+        run: |
+          set -eu
+          latest="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error::This run is stale; refusing to build an APK from an older main commit."
+            exit 1
+          fi
+
+      - name: Build signed release APK
+        env:
+          CHIYURI_KEYSTORE_PATH: ${{ runner.temp }}/chiyuri-signing/release.jks
+          CHIYURI_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          CHIYURI_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          CHIYURI_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$CHIYURI_KEYSTORE_PASSWORD"
+          test -n "$CHIYURI_KEY_ALIAS"
+          test -n "$CHIYURI_KEY_PASSWORD"
+          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=${APP_VERSION_CODE}
+
+      - name: Verify APK signature
+        run: |
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
+          BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
+          printf '%s\n' "$BADGING" | grep -F "package: name='com.chiyuri.player' versionCode='$APP_VERSION_CODE' versionName='$APP_VERSION_NAME'" >/dev/null || {
+            echo "::error::APK manifest version does not match the single Gradle release version."
+            printf '%s\n' "$BADGING" | grep "^package:"
+            exit 1
+          }
+          echo "APK manifest verified: versionName=$APP_VERSION_NAME versionCode=$APP_VERSION_CODE"
+          sha256sum "$APK" | tee ChiyuriPlayer-$APP_VERSION_NAME.sha256
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChiyuriPlayer-${{ env.APP_VERSION_NAME }}
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Ensure source is still latest main before publishing
+        run: |
+          set -eu
+          latest="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error::A newer main commit exists; refusing to publish this stale APK."
+            exit 1
+          fi
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.APP_VERSION_NAME }}
+          name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
+          body: |
+            Центр обновлений: исходная эмблема расположена по центру с масштабированием Fit и используется как фон визуального индикатора загрузки.
+            Текстура крови переработана в алую, тёмную, неоднородную с прожилками, каплями и бликами; круговое заполнение и световая волна сохранены.
+            При раскрытии мини-плеера отключён автоматический поиск текстов в интернете: отображаются только встроенные тексты и данные, сохранённые редактором.
+            Версия приложения отображается в формате «версия приложения - versionCode»: 0.5.1 - 337.
+          files: |
+            app/build/outputs/apk/release/app-release.apk
+            ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
+          make_latest: true
+          fail_on_unmatched_files: true
+ "$REPORT" || {
+            echo "::error::Release blocked: Android Lint must report zero errors, warnings and hints."
+            exit 1
+          }
 
       - name: Ensure source is still latest main before building
         run: |
