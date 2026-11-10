@@ -2378,7 +2378,14 @@ jobs:
           packages: platform-tools
 
       - name: Install Android SDK components
-        run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+        run: |
+          set -eu
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+          # Android Gradle Plugin resolves compileSdk 37 through the canonical android-37 directory.
+          if [ -d "$ANDROID_HOME/platforms/android-37.0" ] && [ ! -e "$ANDROID_HOME/platforms/android-37" ]; then
+            ln -s android-37.0 "$ANDROID_HOME/platforms/android-37"
+          fi
+          test -f "$ANDROID_HOME/platforms/android-37/android.jar"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
