@@ -141,6 +141,7 @@ private fun requiresLocalNetworkPermission(hostValue: String): Boolean {
     return false
 }
 '''
+s=once(s,"Uri.parse(address.trim())","address.trim().toUri()","network stream URI")
 write(p,s)
 p=BASE/"TrackArtworkBackdrop.kt"; s=read(p); s=once(s,"Bitmap.createScaledBitmap(source, 40, 40, true)","source.scale(40, 40)","bitmap scale"); s=once(s,"sample.getPixel(x, y)","sample[x, y]","bitmap pixel"); write(p,s)
 # Remove unused color, retain Media3 resources resolved by library resource name.
