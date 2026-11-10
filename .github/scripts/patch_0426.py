@@ -13,7 +13,8 @@ def imp(s,value):
  return s
 p=ROOT/"app/build.gradle.kts"; s=read(p)
 for a,b,n in [
- ("targetSdk = 35","targetSdk = 36","target SDK"),
+ ("compileSdk = 36","compileSdk = 37","compile SDK"),
+ ("targetSdk = 35","targetSdk = 37","target SDK"),
  ('versionCode = providers.gradleProperty("VERSION_CODE").orElse("336")','versionCode = providers.gradleProperty("VERSION_CODE").orElse("337")',"versionCode"),
  ('abiFilters += listOf("arm64-v8a")','abiFilters += listOf("arm64-v8a", "x86_64")',"ABI"),
  ("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0","androidx.lifecycle:lifecycle-runtime-ktx:2.11.0","Lifecycle KTX"),
@@ -26,6 +27,7 @@ write(p,s)
 wrapper=ROOT/"gradle/wrapper/gradle-wrapper.properties"
 if wrapper.exists(): write(wrapper,once(read(wrapper),"gradle-9.3.1-bin.zip","gradle-9.9.0-bin.zip","Gradle wrapper"))
 p=ROOT/"app/src/main/AndroidManifest.xml"; s=read(p)
+s=once(s,'    <uses-permission android:name="android.permission.INTERNET" />','    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />',"Android 17 local network permission")
 s=once(s,'            android:screenOrientation="unspecified">','            >',"orientation")
 s=once(s,'            android:exported="true"\n            android:foregroundServiceType="mediaPlayback">',
  '            android:exported="true"\n            android:foregroundServiceType="mediaPlayback"\n            tools:ignore="ExportedService">',"MediaSession service")
