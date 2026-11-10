@@ -2412,7 +2412,11 @@ jobs:
           REPORT=app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt
           test -s "$REPORT"
           tail -n 1 "$REPORT"
-          grep -Eq '^0 errors, 0 warnings, 0 hints?
+          grep -Eq "^0 errors, 0 warnings, 0 hints?$" "$REPORT" || {
+            echo "::error::Release blocked: Android Lint must report zero errors, warnings and hints."
+            exit 1
+          }
+
       - name: Ensure source is still latest main before building
         run: |
           set -eu
