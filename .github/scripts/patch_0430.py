@@ -12,6 +12,7 @@ old_button = """                GothicIconButton(
                     GothicIcon(Icons.Default.Edit, contentDescription = "Редактировать информацию о треке", tint = MaterialTheme.colorScheme.onSurface)
                 }"""
 new_button = """                var moreActionsExpanded by remember { mutableStateOf(false) }
+                var speedMenuExpanded by remember { mutableStateOf(false) }
                 Box {
                     GothicIconButton(
                         onClick = { moreActionsExpanded = true },
@@ -50,11 +51,7 @@ new_button = """                var moreActionsExpanded by remember { mutableSta
                         DropdownMenuItem(
                             text = { Text("Скорость: " + String.format(Locale.getDefault(), "%.2fx", playbackSpeed) + "  ›") },
                             leadingIcon = { GothicIcon(Icons.Default.Speed, contentDescription = null) },
-                            onClick = {
-                                val speeds = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
-                                val current = speeds.indexOfFirst { kotlin.math.abs(it - playbackSpeed) < 0.01f }
-                                onPlaybackSpeedChange(speeds[(current + 1).coerceAtLeast(0) % speeds.size])
-                            }
+                            onClick = { speedMenuExpanded = true }
                         )
                         DropdownMenuItem(
                             text = { Text(
@@ -67,6 +64,21 @@ new_button = """                var moreActionsExpanded by remember { mutableSta
                             leadingIcon = { GothicIcon(Icons.Default.Bedtime, contentDescription = null) },
                             onClick = { moreActionsExpanded = false; onSleepTimerClick() }
                         )
+                    }
+                    DropdownMenu(
+                        expanded = speedMenuExpanded,
+                        onDismissRequest = { speedMenuExpanded = false }
+                    ) {
+                        listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f).forEach { speed ->
+                            DropdownMenuItem(
+                                text = { Text(String.format(Locale.getDefault(), "%.2fx", speed)) },
+                                onClick = {
+                                    onPlaybackSpeedChange(speed)
+                                    speedMenuExpanded = false
+                                    moreActionsExpanded = false
+                                }
+                            )
+                        }
                     }
                 }"""
 if s.count(old_button) != 1:
