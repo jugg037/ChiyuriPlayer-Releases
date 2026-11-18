@@ -37,8 +37,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.5.2"
-      APP_VERSION_CODE: "338"
+      APP_VERSION_NAME: "0.5.3"
+      APP_VERSION_CODE: "339"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2208,7 +2208,7 @@ jobs:
       - name: Fix Compose adaptive icon rendering crash
         run: |
           set -o pipefail
-          python3 -u .github/scripts/patch_0427.py 2>&1 | tee patch_0427.log
+          python3 -u .github/scripts/patch_0427.py 2>&1 | tee patch_0427.log\n\n      - name: Inspect mini-player state and equalizer preset implementation\n        run: |\n          set -o pipefail\n          python3 -u .github/scripts/patch_0428.py 2>&1 | tee patch_0428.log
 
       - name: Verify Compose icon uses raster drawable
         run: |
