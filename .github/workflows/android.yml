@@ -20,6 +20,7 @@ on:
       - ".github/scripts/patch_0426.py"
       - ".github/scripts/patch_0427.py"
       - ".github/scripts/patch_0428.py"
+      - ".github/scripts/patch_0429.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
@@ -2216,6 +2217,11 @@ jobs:
           set -o pipefail
           python3 -u .github/scripts/patch_0428.py 2>&1 | tee patch_0428.log
 
+      - name: Remove final Android Lint warnings
+        run: |
+          set -o pipefail
+          python3 -u .github/scripts/patch_0429.py 2>&1 | tee patch_0429.log
+
       - name: Verify all four requested features
         run: |
           set -eu
@@ -2228,7 +2234,7 @@ jobs:
           grep -F 'CustomEqualizerPresetStore.save(context, customPresetName, config.bandsDb)' "$MAIN"
           grep -F 'CustomEqualizerPresetStore.delete(context, preset.name)' "$MAIN"
           grep -F 'heightIn(max = 480.dp).aspectRatio(16f / 9f)' "$MAIN"
-          grep -F 'android:screenOrientation="fullUser"' app/src/main/AndroidManifest.xml
+          ! grep -F 'screenOrientation=' app/src/main/AndroidManifest.xml
           test -s app/src/main/java/com/chiyuri/player/CustomEqualizerPresets.kt
           test -s app/src/test/java/com/chiyuri/player/CustomEqualizerPresetNameTest.kt
 
@@ -2439,7 +2445,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "9.9.0"
+          gradle-version: "9.9.1"
 
       - name: Restore release signing key
         env:
