@@ -2208,7 +2208,12 @@ jobs:
       - name: Fix Compose adaptive icon rendering crash
         run: |
           set -o pipefail
-          python3 -u .github/scripts/patch_0427.py 2>&1 | tee patch_0427.log\n\n      - name: Inspect mini-player state and equalizer preset implementation\n        run: |\n          set -o pipefail\n          python3 -u .github/scripts/patch_0428.py 2>&1 | tee patch_0428.log
+          python3 -u .github/scripts/patch_0427.py 2>&1 | tee patch_0427.log
+
+      - name: Inspect mini-player state and equalizer preset implementation
+        run: |
+          set -o pipefail
+          python3 -u .github/scripts/patch_0428.py 2>&1 | tee patch_0428.log
 
       - name: Verify Compose icon uses raster drawable
         run: |
