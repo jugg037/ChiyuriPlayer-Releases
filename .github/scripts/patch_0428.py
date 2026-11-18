@@ -31,6 +31,7 @@ anchor="""    val context = LocalContext.current
     var queueVersion by remember { mutableIntStateOf(0) }"""
 logic=r'''    val context = LocalContext.current
     var pendingDeleteUri by remember { mutableStateOf<Uri?>(null) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
     var retryDeleteAfterConsent by remember { mutableStateOf(false) }
     val deleteMediaLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         val uri = pendingDeleteUri
@@ -76,29 +77,32 @@ logic=r'''    val context = LocalContext.current
     }
     var queueVersion by remember { mutableIntStateOf(0) }'''
 m=once(m,anchor,logic,"delete permission flow")
+delete_dialog = """    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text("Удалить файл с устройства?") },
+            text = { Text("Файл будет удалён после системного подтверждения Android. Это не просто удаление из очереди или плейлиста.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirmation = false
+                    requestDeleteCurrentTrack()
+                }) { Text("Продолжить") }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteConfirmation = false }) { Text("Отмена") } }
+        )
+    }
+
+"""
+m=once(m,"    if (showMetadataEditor) {",delete_dialog+"    if (showMetadataEditor) {","delete confirmation dialog")
 m=once(m,"                    onEditMetadata = { showMetadataEditor = true },",
-       "                    onEditMetadata = { showMetadataEditor = true },\n                    onDeleteTrack = { requestDeleteCurrentTrack() },","delete callback")
+       "                    onEditMetadata = { showMetadataEditor = true },\n                    onDeleteTrack = { showDeleteConfirmation = true },","delete callback")
 a=m.index("private fun MiniPlayerBar("); b=m.index("\n@Composable",a+20); mini=m[a:b]
 mini=once(mini,"    onEditMetadata: () -> Unit,","    onEditMetadata: () -> Unit,\n    onDeleteTrack: () -> Unit,","delete parameter")
-body_start = mini.find(") {")
-surface_start = mini.find("Surface(", body_start)
-if body_start < 0 or surface_start < 0 or mini[body_start + 3:surface_start].strip():
-    raise SystemExit("Could not locate MiniPlayerBar body for delete confirmation state")
-mini = mini[:body_start + 3] + "\n    var showDeleteConfirmation by remember { mutableStateOf(false) }\n" + mini[body_start + 3:]
 ui=r'''            if (expanded) {
-                TextButton(onClick = { showDeleteConfirmation = true }, modifier = Modifier.align(Alignment.End)) {
+                TextButton(onClick = onDeleteTrack, modifier = Modifier.align(Alignment.End)) {
                     GothicIcon(Icons.Default.Delete, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
                     Text("Удалить файл")
-                }
-                if (showDeleteConfirmation) {
-                    AlertDialog(
-                        onDismissRequest = { showDeleteConfirmation = false },
-                        title = { Text("Удалить файл с устройства?") },
-                        text = { Text("Файл будет удалён после системного подтверждения Android. Это не просто удаление из очереди или плейлиста.") },
-                        confirmButton = { TextButton(onClick = { showDeleteConfirmation = false; onDeleteTrack() }) { Text("Продолжить") } },
-                        dismissButton = { TextButton(onClick = { showDeleteConfirmation = false }) { Text("Отмена") } }
-                    )
                 }
             }
 '''
