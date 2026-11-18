@@ -2224,7 +2224,7 @@ jobs:
           ! grep -F 'expandedMiniPlayer = false' "$MAIN"
           grep -F 'MediaStore.createDeleteRequest' "$MAIN"
           grep -F 'RecoverableSecurityException' "$MAIN"
-          grep -F 'onDeleteTrack = { requestDeleteCurrentTrack() }' "$MAIN"
+          grep -F 'onDeleteTrack = { showDeleteConfirmation = true }' "$MAIN"
           grep -F 'CustomEqualizerPresetStore.save(context, customPresetName, config.bandsDb)' "$MAIN"
           grep -F 'CustomEqualizerPresetStore.delete(context, preset.name)' "$MAIN"
           grep -F 'heightIn(max = 480.dp).aspectRatio(16f / 9f)' "$MAIN"
