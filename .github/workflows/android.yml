@@ -2211,10 +2211,26 @@ jobs:
           set -o pipefail
           python3 -u .github/scripts/patch_0427.py 2>&1 | tee patch_0427.log
 
-      - name: Inspect mini-player state and equalizer preset implementation
+      - name: Implement mini-player, deletion, landscape and custom equalizer features
         run: |
           set -o pipefail
           python3 -u .github/scripts/patch_0428.py 2>&1 | tee patch_0428.log
+
+      - name: Verify all four requested features
+        run: |
+          set -eu
+          MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
+          grep -F 'rememberSaveable { mutableStateOf(false) }' "$MAIN"
+          ! grep -F 'expandedMiniPlayer = false' "$MAIN"
+          grep -F 'MediaStore.createDeleteRequest' "$MAIN"
+          grep -F 'RecoverableSecurityException' "$MAIN"
+          grep -F 'onDeleteTrack = { requestDeleteCurrentTrack() }' "$MAIN"
+          grep -F 'CustomEqualizerPresetStore.save(context, customPresetName, config.bandsDb)' "$MAIN"
+          grep -F 'CustomEqualizerPresetStore.delete(context, preset.name)' "$MAIN"
+          grep -F 'heightIn(max = 480.dp).aspectRatio(16f / 9f)' "$MAIN"
+          grep -F 'android:screenOrientation="fullUser"' app/src/main/AndroidManifest.xml
+          test -s app/src/main/java/com/chiyuri/player/CustomEqualizerPresets.kt
+          test -s app/src/test/java/com/chiyuri/player/CustomEqualizerPresetNameTest.kt
 
       - name: Verify Compose icon uses raster drawable
         run: |
@@ -2548,8 +2564,11 @@ jobs:
           tag_name: v${{ env.APP_VERSION_NAME }}
           name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
           body: |
-            Исправлено аварийное завершение интерфейса: Compose теперь загружает PNG foreground эмблемы вместо Adaptive Icon XML.
-            Версия приложения отображается в формате «версия приложения - versionCode»: 0.5.3 - 339.
+            - Развёрнутый мини-плеер сохраняет состояние при переключении треков и повороте экрана.
+            - Добавлено удаление текущего локального медиафайла из мини-плеера с подтверждением Android.
+            - Добавлена поддержка портретной и альбомной ориентации, адаптивный видеокадр для широких экранов и планшетов.
+            - Добавлены пользовательские пресеты эквалайзера: сохранение, применение и удаление.
+            Версия приложения: 0.5.3 - 339.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
