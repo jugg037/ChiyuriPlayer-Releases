@@ -19,15 +19,13 @@ for a,b,n in [
  ('abiFilters += listOf("arm64-v8a")','abiFilters += listOf("arm64-v8a", "x86_64")',"ABI"),
  ("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0","androidx.lifecycle:lifecycle-runtime-ktx:2.11.0","Lifecycle KTX"),
  ("androidx.work:work-runtime-ktx:2.10.5","androidx.work:work-runtime-ktx:2.12.0","Work KTX")]: s=once(s,a,b,n)
-if 'versionName = "0.2.1"' in s:
- s=s.replace('versionName = "0.2.1"','versionName = "0.5.2"',1)
-elif 'versionName = "0.5.0"' in s:
- s=s.replace('versionName = "0.5.0"','versionName = "0.5.2"',1)
-elif 'versionName = "0.5.1"' in s:
- s=s.replace('versionName = "0.5.1"','versionName = "0.5.2"',1)
-elif 'versionName = "0.5.2"' not in s:
- raise SystemExit("Unexpected Gradle versionName; expected source baseline or 0.5.0/0.5.1/0.5.2")
-s=s.replace('orElse("337")','orElse("338")')
+import re
+matches = re.findall(r'versionName = "([^"]+)"', s)
+if len(matches) != 1:
+ raise SystemExit(f"Expected one versionName declaration, found {len(matches)}")
+s = re.sub(r'versionName = "[^"]+"', 'versionName = "0.5.3"', s, count=1)
+s = re.sub(r'orElse\("[0-9]+"\)', 'orElse("339")', s, count=1)
+
 write(p,s)
 wrapper=ROOT/"gradle/wrapper/gradle-wrapper.properties"
 if wrapper.exists(): write(wrapper,once(read(wrapper),"gradle-9.3.1-bin.zip","gradle-9.9.0-bin.zip","Gradle wrapper"))
