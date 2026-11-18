@@ -80,7 +80,8 @@ m=once(m,"                    onEditMetadata = { showMetadataEditor = true },",
        "                    onEditMetadata = { showMetadataEditor = true },\n                    onDeleteTrack = { requestDeleteCurrentTrack() },","delete callback")
 a=m.index("private fun MiniPlayerBar("); b=m.index("\n@Composable",a+20); mini=m[a:b]
 mini=once(mini,"    onEditMetadata: () -> Unit,","    onEditMetadata: () -> Unit,\n    onDeleteTrack: () -> Unit,","delete parameter")
-mini=once(mini,") {\n    Surface(",") {\n    var showDeleteConfirmation by remember { mutableStateOf(false) }\n    Surface(","delete confirmation state")
+mini, state_count = __import__("re").subn(r"(\\)\\s*\\{\\s*\\n)(?=\\s*Surface\\()", r"\\1    var showDeleteConfirmation by remember { mutableStateOf(false) }\\n", mini, count=1)
+if state_count != 1: raise SystemExit("Could not locate MiniPlayerBar body for delete confirmation state")
 ui=r'''            if (expanded) {
                 TextButton(onClick = { showDeleteConfirmation = true }, modifier = Modifier.align(Alignment.End)) {
                     GothicIcon(Icons.Default.Delete, contentDescription = null)
