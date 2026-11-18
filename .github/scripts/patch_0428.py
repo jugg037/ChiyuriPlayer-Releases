@@ -233,7 +233,7 @@ if 'android:screenOrientation="fullUser"' not in s:
 w(manifest,s)
 
 m=r(p)
-for marker in ["rememberSaveable { mutableStateOf(false) }","onDeleteTrack = { requestDeleteCurrentTrack() }",
+for marker in ["rememberSaveable { mutableStateOf(false) }","onDeleteTrack = { showDeleteConfirmation = true }",
                "MediaStore.createDeleteRequest","CustomEqualizerPresetStore.save(context, customPresetName, config.bandsDb)",
                "heightIn(max = 480.dp).aspectRatio(16f / 9f)"]:
     if marker not in m: raise SystemExit("Missing final feature marker: "+marker)
