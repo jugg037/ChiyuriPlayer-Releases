@@ -19,6 +19,7 @@ on:
       - ".github/scripts/patch_0425.py"
       - ".github/scripts/patch_0426.py"
       - ".github/scripts/patch_0427.py"
+      - ".github/scripts/patch_0428.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
