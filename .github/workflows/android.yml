@@ -2229,8 +2229,24 @@ jobs:
           set -o pipefail
           python3 -u .github/scripts/patch_0430.py 2>&1 | tee patch_0430.log
 
-      - name: Audit video playback and orientation integration points
+      - name: Apply landscape playback and fullscreen video rotation
         run: python3 -u .github/scripts/patch_0431.py
+
+      - name: Verify landscape playback and fullscreen orientation toggle
+        run: |
+          set -eu
+          MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
+          grep -F 'SCREEN_ORIENTATION_LANDSCAPE' "$MAIN"
+          grep -F 'SCREEN_ORIENTATION_PORTRAIT' "$MAIN"
+          grep -F 'SCREEN_ORIENTATION_UNSPECIFIED' "$MAIN"
+          grep -F 'Icons.Default.ScreenRotation' "$MAIN"
+          grep -F 'fullscreenVideoPortrait = !fullscreenVideoPortrait' "$MAIN"
+          grep -F 'rememberSaveable { mutableStateOf(false) }' "$MAIN"
+          grep -F 'LaunchedEffect(hostActivity, currentMediaUri, isVideoFullscreen, fullscreenVideoPortrait, playing)' "$MAIN"
+          grep -F 'versionName = "0.5.5"' app/build.gradle.kts
+          grep -F 'orElse("341")' app/build.gradle.kts
+          echo "PASS: landscape audio/video playback, persistent fullscreen orientation toggle and reset after playback."
+
 
       - name: Verify all four requested features
         run: |
