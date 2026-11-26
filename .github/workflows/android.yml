@@ -2238,6 +2238,9 @@ jobs:
       - name: Fix dependency freshness warnings
         run: python3 -u .github/scripts/patch_0432.py
 
+      - name: Verify dependency and Gradle alignment
+        run: python3 -u .github/scripts/patch_0433.py
+
       - name: Apply automatic device sensor orientation
         run: python3 -u .github/scripts/patch_0434.py
 
@@ -2248,7 +2251,7 @@ jobs:
           grep -F 'SCREEN_ORIENTATION_FULL_SENSOR' "$MAIN"
           grep -F 'SCREEN_ORIENTATION_PORTRAIT' "$MAIN"
           grep -F 'SCREEN_ORIENTATION_UNSPECIFIED' "$MAIN"
-          ! grep -F 'mediaPlaybackActive ->' "$MAIN" | grep -F 'SCREEN_ORIENTATION_LANDSCAPE'
+          ! grep -A1 -F 'mediaPlaybackActive ->' "$MAIN" | grep -F 'SCREEN_ORIENTATION_LANDSCAPE'
           grep -F 'Icons.Default.ScreenRotation' "$MAIN"
           grep -F 'fullscreenVideoPortrait = !fullscreenVideoPortrait' "$MAIN"
           grep -F 'Включить автоматическую ориентацию' "$MAIN"
@@ -2384,7 +2387,7 @@ jobs:
           test ! -e app/src/main/res/values/colors.xml
           grep -F 'mutableIntStateOf(0)' "$MAIN"
           ! grep -R -E 'Uri\.parse\(|\.edit\(\)\.put|Bitmap\.createScaledBitmap|\.getPixel\(' app/src/main/java/com/chiyuri/player
-          grep -F 'versionName = "0.5.5"' "$GRADLE"
+          grep -F 'versionName = "0.5.6"' "$GRADLE"
           grep -F 'orElse("342")' "$GRADLE"
           echo "Android 17 edge-to-edge, local-network permission, trusted media session, ABI, KTX and resources verified."
 
@@ -2625,7 +2628,7 @@ jobs:
           body: |
             - Воспроизведение аудио и видео переведено в альбомную ориентацию.
             - В полноэкранный видеоплеер добавлена кнопка переключения ориентации экрана.
-            Версия приложения: 0.5.5 - 342.
+            Версия приложения: 0.5.6 - 342.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
