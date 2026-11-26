@@ -22,6 +22,7 @@ on:
       - ".github/scripts/patch_0428.py"
       - ".github/scripts/patch_0429.py"
       - ".github/scripts/patch_0430.py"
+      - ".github/scripts/patch_0431.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
@@ -40,8 +41,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.5.4"
-      APP_VERSION_CODE: "340"
+      APP_VERSION_NAME: "0.5.5"
+      APP_VERSION_CODE: "341"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2228,6 +2229,9 @@ jobs:
           set -o pipefail
           python3 -u .github/scripts/patch_0430.py 2>&1 | tee patch_0430.log
 
+      - name: Audit video playback and orientation integration points
+        run: python3 -u .github/scripts/patch_0431.py
+
       - name: Verify all four requested features
         run: |
           set -eu
@@ -2297,7 +2301,7 @@ jobs:
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsScreen.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsMiniPanel.kt
-          grep -F 'orElse("340")' app/build.gradle.kts
+          grep -F 'orElse("341")' app/build.gradle.kts
           echo "Original PNG alpha-masked blood texture, clockwise loader and all integrations verified."
 
       - name: Full pre-build audit for v0.5.0
@@ -2353,8 +2357,8 @@ jobs:
           test ! -e app/src/main/res/values/colors.xml
           grep -F 'mutableIntStateOf(0)' "$MAIN"
           ! grep -R -E 'Uri\.parse\(|\.edit\(\)\.put|Bitmap\.createScaledBitmap|\.getPixel\(' app/src/main/java/com/chiyuri/player
-          grep -F 'versionName = "0.5.4"' "$GRADLE"
-          grep -F 'orElse("340")' "$GRADLE"
+          grep -F 'versionName = "0.5.5"' "$GRADLE"
+          grep -F 'orElse("341")' "$GRADLE"
           echo "Android 17 edge-to-edge, local-network permission, trusted media session, ABI, KTX and resources verified."
 
       - name: Upload platform audit diagnostics
@@ -2592,9 +2596,9 @@ jobs:
           tag_name: v${{ env.APP_VERSION_NAME }}
           name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
           body: |
-            - Дополнительные действия мини-плеера собраны в вертикальное меню по кнопке с тремя точками: редактирование, удаление файла, перемешивание, повтор, скорость и таймер сна.
-            - Аудиовизуализатор перенесён в нижнюю часть развёрнутого мини-плеера и увеличен по высоте с 54 до 108 dp.
-            Версия приложения: 0.5.4 - 340.
+            - Воспроизведение аудио и видео переведено в альбомную ориентацию.
+            - В полноэкранный видеоплеер добавлена кнопка переключения ориентации экрана.
+            Версия приложения: 0.5.5 - 341.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
