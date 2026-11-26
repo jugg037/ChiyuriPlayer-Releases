@@ -2338,7 +2338,7 @@ jobs:
           grep -F '0xFFFF263F.toInt()' "$LOADER"
           grep -F '0xFF240008.toInt()' "$LOADER"
           grep -F '0x66FF1E36' "$LOADER"
-          grep -F 'orElse("340")' app/build.gradle.kts
+          grep -F 'orElse("341")' app/build.gradle.kts
           grep -F 'Установлена версия " + AppUpdates.CURRENT_VERSION + " - " + AppUpdates.CURRENT_VERSION_CODE' "$UPDATES"
           echo "PASS: emblem, centered fit layout, dark scarlet texture, visual progress, no mini-player internet lookup and versionName-versionCode."
 
