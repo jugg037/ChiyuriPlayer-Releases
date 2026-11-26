@@ -25,6 +25,7 @@ on:
       - ".github/scripts/patch_0431.py"
       - ".github/scripts/patch_0432.py"
       - ".github/scripts/patch_0433.py"
+      - ".github/scripts/patch_0434.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
@@ -43,8 +44,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.5.5"
-      APP_VERSION_CODE: "341"
+      APP_VERSION_NAME: "0.5.6"
+      APP_VERSION_CODE: "342"
     steps:
       - name: Checkout public release repository
         uses: actions/checkout@v4
@@ -2237,23 +2238,25 @@ jobs:
       - name: Fix dependency freshness warnings
         run: python3 -u .github/scripts/patch_0432.py
 
-      - name: Verify dependency and Gradle alignment
-        run: python3 -u .github/scripts/patch_0433.py
+      - name: Apply automatic device sensor orientation
+        run: python3 -u .github/scripts/patch_0434.py
 
-      - name: Verify landscape playback and fullscreen orientation toggle
+      - name: Verify automatic device sensor orientation and fullscreen override
         run: |
           set -eu
           MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
-          grep -F 'SCREEN_ORIENTATION_LANDSCAPE' "$MAIN"
+          grep -F 'SCREEN_ORIENTATION_FULL_SENSOR' "$MAIN"
           grep -F 'SCREEN_ORIENTATION_PORTRAIT' "$MAIN"
           grep -F 'SCREEN_ORIENTATION_UNSPECIFIED' "$MAIN"
+          ! grep -F 'mediaPlaybackActive ->' "$MAIN" | grep -F 'SCREEN_ORIENTATION_LANDSCAPE'
           grep -F 'Icons.Default.ScreenRotation' "$MAIN"
           grep -F 'fullscreenVideoPortrait = !fullscreenVideoPortrait' "$MAIN"
+          grep -F 'Включить автоматическую ориентацию' "$MAIN"
           grep -F 'rememberSaveable { mutableStateOf(false) }' "$MAIN"
           grep -F 'LaunchedEffect(hostActivity, currentMediaUri, isVideoFullscreen, fullscreenVideoPortrait, playing)' "$MAIN"
-          grep -F 'versionName = "0.5.5"' app/build.gradle.kts
-          grep -F 'orElse("341")' app/build.gradle.kts
-          echo "PASS: landscape audio/video playback, persistent fullscreen orientation toggle and reset after playback."
+          grep -F 'versionName = "0.5.6"' app/build.gradle.kts
+          grep -F 'orElse("342")' app/build.gradle.kts
+          echo "PASS: audio/video playback follows all device sensor orientations; fullscreen video can temporarily lock portrait and return to automatic mode."
 
 
       - name: Verify all four requested features
@@ -2325,7 +2328,7 @@ jobs:
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsScreen.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsMiniPanel.kt
-          grep -F 'orElse("341")' app/build.gradle.kts
+          grep -F 'orElse("342")' app/build.gradle.kts
           echo "Original PNG alpha-masked blood texture, clockwise loader and all integrations verified."
 
       - name: Full pre-build audit for v0.5.0
@@ -2346,7 +2349,7 @@ jobs:
           grep -F '0xFFFF263F.toInt()' "$LOADER"
           grep -F '0xFF240008.toInt()' "$LOADER"
           grep -F '0x66FF1E36' "$LOADER"
-          grep -F 'orElse("341")' app/build.gradle.kts
+          grep -F 'orElse("342")' app/build.gradle.kts
           grep -F 'Установлена версия " + AppUpdates.CURRENT_VERSION + " - " + AppUpdates.CURRENT_VERSION_CODE' "$UPDATES"
           echo "PASS: emblem, centered fit layout, dark scarlet texture, visual progress, no mini-player internet lookup and versionName-versionCode."
 
@@ -2382,7 +2385,7 @@ jobs:
           grep -F 'mutableIntStateOf(0)' "$MAIN"
           ! grep -R -E 'Uri\.parse\(|\.edit\(\)\.put|Bitmap\.createScaledBitmap|\.getPixel\(' app/src/main/java/com/chiyuri/player
           grep -F 'versionName = "0.5.5"' "$GRADLE"
-          grep -F 'orElse("341")' "$GRADLE"
+          grep -F 'orElse("342")' "$GRADLE"
           echo "Android 17 edge-to-edge, local-network permission, trusted media session, ABI, KTX and resources verified."
 
       - name: Upload platform audit diagnostics
@@ -2622,7 +2625,7 @@ jobs:
           body: |
             - Воспроизведение аудио и видео переведено в альбомную ориентацию.
             - В полноэкранный видеоплеер добавлена кнопка переключения ориентации экрана.
-            Версия приложения: 0.5.5 - 341.
+            Версия приложения: 0.5.5 - 342.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
