@@ -23,6 +23,7 @@ on:
       - ".github/scripts/patch_0429.py"
       - ".github/scripts/patch_0430.py"
       - ".github/scripts/patch_0431.py"
+      - ".github/scripts/patch_0432.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
@@ -2231,6 +2232,9 @@ jobs:
 
       - name: Apply landscape playback and fullscreen video rotation
         run: python3 -u .github/scripts/patch_0431.py
+
+      - name: Fix dependency freshness warnings
+        run: python3 -u .github/scripts/patch_0432.py
 
       - name: Verify landscape playback and fullscreen orientation toggle
         run: |
