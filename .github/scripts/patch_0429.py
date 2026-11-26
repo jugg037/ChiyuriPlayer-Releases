@@ -22,16 +22,16 @@ prefs.write_text(text, encoding="utf-8")
 
 wrapper = Path("gradle/wrapper/gradle-wrapper.properties")
 text = wrapper.read_text(encoding="utf-8")
-text, n = re.subn(r"gradle-9\.9\.0-(bin|all)\.zip", r"gradle-9.9.1-\1.zip", text)
+text, n = re.subn(r"gradle-9\.9\.[01]-(bin|all)\.zip", r"gradle-9.9.2-\1.zip", text)
 if n == 0 and "gradle-9.9.2-" not in text:
-    raise SystemExit("Gradle wrapper must be 9.9.0 or 9.9.1")
+    raise SystemExit("Gradle wrapper must be 9.9.0, 9.9.1 or 9.9.2")
 wrapper.write_text(text, encoding="utf-8")
 
 workflow = Path(".github/workflows/android.yml")
 text = workflow.read_text(encoding="utf-8")
 if 'gradle-version: "9.9.2"' not in text:
-    text, n = re.subn(r'gradle-version: "9\.9\.0"', 'gradle-version: "9.9.1"', text)
-    if n != 1 and 'gradle-version: "9.9.2"' not in text:
-        raise SystemExit("Gradle setup must be 9.9.0 or 9.9.1")
+    text, n = re.subn(r'gradle-version: "9\.9\.[01]"', 'gradle-version: "9.9.2"', text)
+    if n != 1:
+        raise SystemExit("Gradle setup must be 9.9.0, 9.9.1 or 9.9.2")
     workflow.write_text(text, encoding="utf-8")
 print("PATCH_0429_OK: KTX preferences, adaptive orientation, Gradle 9.9.2.")
