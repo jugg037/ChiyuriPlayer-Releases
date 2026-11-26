@@ -10,32 +10,34 @@ def replace_once(old: str, new: str, label: str) -> None:
         raise SystemExit(f"{label}: expected one anchor, found {count}")
     s = s.replace(old, new, 1)
 
-# Save fullscreen state across the Activity recreation caused by orientation changes.
+# Preserve fullscreen UI and the selected orientation across Android Activity recreation.
 replace_once(
     '    var isVideoFullscreen by remember { mutableStateOf(false) }\n',
     '    var isVideoFullscreen by rememberSaveable { mutableStateOf(false) }\n'
     '    var fullscreenVideoPortrait by rememberSaveable { mutableStateOf(false) }\n',
-    "saveable fullscreen video orientation state"
+    "saveable fullscreen orientation state"
 )
 
-# Playback in the app uses landscape by default for both audio and video.
-# Fullscreen video allows an explicit portrait override, retained through rotation.
-orientation_effect = '''    DisposableEffect(hostActivity, currentMediaUri, isVideoFullscreen, fullscreenVideoPortrait, playing) {
-        val activity = hostActivity
-        if (activity != null) {
-            val mediaPlaybackActive = currentMediaUri != null &&
-                player.playbackState != Player.STATE_IDLE
-            activity.requestedOrientation = when {
-                mediaPlaybackActive && isVideoFullscreen && fullscreenVideoPortrait ->
-                    android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                mediaPlaybackActive ->
-                    android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                else ->
-                    android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-            }
+# Update orientation when playback/fullscreen state changes. Keep cleanup in a
+# separate Activity-keyed effect so changing orientation does not briefly reset
+# to UNSPECIFIED and trigger a second, unnecessary configuration change.
+orientation_effect = '''    LaunchedEffect(hostActivity, currentMediaUri, isVideoFullscreen, fullscreenVideoPortrait, playing) {
+        val activity = hostActivity ?: return@LaunchedEffect
+        val mediaPlaybackActive = currentMediaUri != null &&
+            player.playbackState != Player.STATE_IDLE
+        activity.requestedOrientation = when {
+            mediaPlaybackActive && isVideoFullscreen && fullscreenVideoPortrait ->
+                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            mediaPlaybackActive ->
+                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            else ->
+                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
+    }
+
+    DisposableEffect(hostActivity) {
         onDispose {
-            activity?.requestedOrientation =
+            hostActivity?.requestedOrientation =
                 android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
@@ -47,14 +49,16 @@ replace_once(
     "playback orientation controller"
 )
 
-# Add a rotation toggle beside the fullscreen exit control.
-exit_button = '''            GothicIconButton(
-                onClick = { isVideoFullscreen = false },
-                modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
-            ) {
-                GothicIcon(Icons.Default.FullscreenExit, contentDescription = "Выйти из полноэкранного режима", tint = Color.White)
-            }'''
-rotate_button = '''            GothicIconButton(
+# Add a portrait/landscape toggle immediately before the existing fullscreen exit button.
+exit_icon = 'GothicIcon(Icons.Default.FullscreenExit, contentDescription = "Выйти из полноэкранного режима", tint = Color.White)'
+if s.count(exit_icon) != 1:
+    raise SystemExit(f"Fullscreen exit icon anchor mismatch: {s.count(exit_icon)}")
+icon_pos = s.index(exit_icon)
+button_pos = s.rfind("            GothicIconButton(", 0, icon_pos)
+fullscreen_pos = s.rfind("    if (isVideoFullscreen)", 0, icon_pos)
+if button_pos < fullscreen_pos or fullscreen_pos < 0:
+    raise SystemExit("Could not locate fullscreen exit button inside fullscreen overlay")
+rotation_button = '''            GothicIconButton(
                 onClick = { fullscreenVideoPortrait = !fullscreenVideoPortrait },
                 modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
             ) {
@@ -64,13 +68,11 @@ rotate_button = '''            GothicIconButton(
                     tint = Color.White
                 )
             }
-            GothicIconButton(
-                onClick = { isVideoFullscreen = false },
-                modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
-            ) {
-                GothicIcon(Icons.Default.FullscreenExit, contentDescription = "Выйти из полноэкранного режима", tint = Color.White)
-            }'''
-replace_once(exit_button, rotate_button, "fullscreen rotation button")
+'''
+s = s[:button_pos] + rotation_button + s[button_pos:]
+
+if "import androidx.compose.runtime.LaunchedEffect" not in s:
+    s = s.replace("import androidx.compose.runtime.DisposableEffect\n", "import androidx.compose.runtime.DisposableEffect\nimport androidx.compose.runtime.LaunchedEffect\n", 1)
 
 main.write_text(s, encoding="utf-8")
 
@@ -84,15 +86,15 @@ if 'orElse("340")' not in g:
 g = g.replace('orElse("340")', 'orElse("341")', 1)
 gradle.write_text(g, encoding="utf-8")
 
-# Verify orientation handling is present exactly where expected.
 for marker in [
     "SCREEN_ORIENTATION_LANDSCAPE",
     "SCREEN_ORIENTATION_PORTRAIT",
     "SCREEN_ORIENTATION_UNSPECIFIED",
     "Icons.Default.ScreenRotation",
     "rememberSaveable { mutableStateOf(false) }",
+    "LaunchedEffect(hostActivity, currentMediaUri, isVideoFullscreen, fullscreenVideoPortrait, playing)",
 ]:
     if marker not in s:
         raise SystemExit("Missing orientation implementation marker: " + marker)
 
-print("PATCH_0431_OK: audio/video playback defaults to landscape; fullscreen video has a persistent portrait/landscape toggle; orientation resets on playback exit; v0.5.5 (341).")
+print("PATCH_0431_OK: audio/video playback defaults to landscape; fullscreen video has a portrait/landscape toggle; orientation cleanup is Activity-scoped; state survives rotation; v0.5.5 (341).")
