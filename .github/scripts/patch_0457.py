@@ -71,7 +71,7 @@ s = s.replace("        loudnessEnhancer = null", "        loudnessEnhancer = nul
 s += '''
 
 internal fun isSpatialAudioAvailable(): Boolean =
-    runCatching { Virtualizer.isAvailable() }.getOrDefault(false)
+    runCatching { AudioEffect.queryEffects()?.any { it.type == AudioEffect.EFFECT_TYPE_VIRTUALIZER } == true }.getOrDefault(false)
 '''
 p.write_text(s, encoding="utf-8")
 
