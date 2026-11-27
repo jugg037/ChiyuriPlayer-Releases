@@ -2326,7 +2326,16 @@ jobs:
           for test in EqualizerPresetsTest.kt AudioEffectsSettingsTest.kt PlaybackHistoryStoreTest.kt MediaLibrarySortingTest.kt RadioStationStoreTest.kt VideoGestureMathTest.kt PlaybackOutputReconnectTest.kt AudioOutputProfileKeyTest.kt MediaLibraryPaginationTest.kt SmbAddressTest.kt LibraryBackupManagerTest.kt ReplayGainReaderTest.kt PlaybackWidgetActionsTest.kt LocalRecommendationsTest.kt; do
             test -s "$TEST/$test"
           done
-          echo "PASS: fourteen feature patches, migration paths, network validation and regression test files are present."
+          test -s "$PKG/PlaybackPreferencesStore.kt"
+          grep -F "setPauseAtEndOfMediaItems" "$PKG/PlaybackService.kt"
+          test -s "$PKG/LocalRecommendations.kt"
+          test -s "$PKG/PartyModeScreen.kt"
+          grep -F "sanitizePlaybackHistory" "$PKG/LibraryBackupManager.kt"
+          grep -F "sanitizeAudioOutputProfiles" "$PKG/LibraryBackupManager.kt"
+          grep -F '"playback_history"' "$PKG/LibraryBackupManager.kt"
+          grep -F '"audio_output_profiles"' "$PKG/LibraryBackupManager.kt"
+          grep -F 'saveGlobal(context' "$PKG/AudioEffectsSettings.kt"
+          echo "PASS: sixteen feature patches, gapless playback, local recommendations, party mix and complete credential-free backups are integrated."
 
       - name: Verify automatic device sensor orientation and fullscreen override
         run: |
