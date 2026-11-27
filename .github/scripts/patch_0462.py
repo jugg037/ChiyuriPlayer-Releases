@@ -99,7 +99,6 @@ for old in [
 ]:
  if s.count(old)!=1: raise SystemExit("patch_0462: legacy network card mismatch")
  s=s.replace(old,"",1)
-main.write_text(s,encoding="utf-8")
 g=p/"GothicUi.kt"; gs=g.read_text(encoding="utf-8")
 old='''        Icon(imageVector = imageVector, contentDescription = contentDescription,
             modifier = Modifier.fillMaxSize(), tint = tint)'''
@@ -177,6 +176,7 @@ anchor='''@Composable
 private fun MiniPlayerBar('''
 if s.count(anchor)!=1: raise SystemExit("patch_0462: mini-player insertion anchor mismatch")
 s=s.replace(anchor,components+anchor,1)
+main.write_text(s,encoding="utf-8")
 # Add independent logical queue snapshot model; integrated into source-specific selection patches in a follow-up.
 (p/"PlaybackSessionQueues.kt").write_text(r'''package com.chiyuri.player
 
