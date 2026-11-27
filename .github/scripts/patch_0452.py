@@ -14,7 +14,7 @@ p = TEST / "PlaceholderTest.kt"
 replace_once(
     p,
     "assertEquals(12f, normalized.bandsDb.last(), 0f)",
-    "assertEquals(-12f, normalized.bandsDb[1], 0.001f)\\n        assertEquals(-8.666666f, normalized.bandsDb[2], 0.001f)\\n        assertEquals(-4f, normalized.bandsDb[3], 0.001f)\\n        assertEquals(1.7777786f, normalized.bandsDb[5], 0.001f)\\n        assertEquals(10.444446f, normalized.bandsDb[7], 0.001f)",
+    "assertEquals(-12f, normalized.bandsDb[1], 0.001f)\n        assertEquals(-8.666666f, normalized.bandsDb[2], 0.001f)\n        assertEquals(-4f, normalized.bandsDb[3], 0.001f)\n        assertEquals(1.7777786f, normalized.bandsDb[5], 0.001f)\n        assertEquals(10.444446f, normalized.bandsDb[7], 0.001f)",
     "ten-band normalized legacy assertion"
 )
 
