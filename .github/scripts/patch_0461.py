@@ -39,4 +39,13 @@ if "player.duration" not in source.split("withContext(kotlinx.coroutines.Dispatc
 else:
     raise SystemExit("patch_0461: MediaController duration access still occurs in IO block")
 target.write_text(source, encoding="utf-8")
-print("patch_0461: MediaController duration is captured before IO dispatcher switch")
+
+gradle = Path("app/build.gradle.kts")
+build = gradle.read_text(encoding="utf-8")
+if 'versionName = "0.5.9"' not in build or 'versionCode = 345' not in build:
+    raise SystemExit("patch_0461: unexpected base version; refusing unsafe version bump")
+build = build.replace('versionName = "0.5.9"', 'versionName = "0.5.10"', 1)
+build = build.replace('versionCode = 345', 'versionCode = 346', 1)
+build = build.replace('orElse("345")', 'orElse("346")')
+gradle.write_text(build, encoding="utf-8")
+print("patch_0461: MediaController duration is captured before IO dispatcher switch; version 0.5.10/346")
