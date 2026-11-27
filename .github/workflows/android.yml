@@ -43,6 +43,7 @@ on:
       - ".github/scripts/patch_0449.py"
       - ".github/scripts/patch_0450.py"
       - ".github/scripts/patch_0451.py"
+      - ".github/scripts/patch_0452.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
@@ -2274,7 +2275,7 @@ jobs:
       - name: Apply parallel audio, library, video, automation and network feature patches
         run: |
           set -euo pipefail
-          for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py .github/scripts/patch_0446.py .github/scripts/patch_0447.py .github/scripts/patch_0448.py .github/scripts/patch_0449.py .github/scripts/patch_0450.py .github/scripts/patch_0451.py; do
+          for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py .github/scripts/patch_0446.py .github/scripts/patch_0447.py .github/scripts/patch_0448.py .github/scripts/patch_0449.py .github/scripts/patch_0450.py .github/scripts/patch_0451.py .github/scripts/patch_0452.py; do
             echo "===== Applying $patch ====="
             python3 -u "$patch" | tee "patch_${patch##*_}.log"
           done
@@ -2336,6 +2337,9 @@ jobs:
           grep -F '"playback_history"' "$PKG/LibraryBackupManager.kt"
           grep -F '"audio_output_profiles"' "$PKG/LibraryBackupManager.kt"
           grep -F 'saveGlobal(context' "$PKG/AudioEffectsSettings.kt"
+          grep -F "sanitizeBackupHistoryEntries" "$PKG/LibraryBackupManager.kt"
+          grep -F "sanitizeBackupAudioProfile" "$PKG/LibraryBackupManager.kt"
+          grep -F "resampleEqualizerBands" "$PKG/AudioOutputProfiles.kt"
           test -s "$PKG/MediaFileInfo.kt"
           grep -F "MediaExtractor" "$PKG/MediaFileInfo.kt"
           grep -F "MediaFileInfoDialog(player" "$PKG/MainActivity.kt"
