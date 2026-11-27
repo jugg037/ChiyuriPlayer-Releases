@@ -2412,7 +2412,11 @@ jobs:
           grep -F 'onDeleteTrack = { showDeleteConfirmation = true }' "$MAIN"
           grep -F 'CustomEqualizerPresetStore.save(context, customPresetName, config.bandsDb)' "$MAIN"
           grep -F 'CustomEqualizerPresetStore.delete(context, preset.name)' "$MAIN"
-          grep -F 'heightIn(max = 480.dp).aspectRatio(16f / 9f)' "$MAIN"
+          grep -F 'VideoMiniPlayerSurface' "$MAIN"
+          grep -F 'NetworkMiniPlayerSurface' "$MAIN"
+          grep -F 'listOf("Музыка", "Видео", "Сеть", "Плейлисты", "Ещё")' "$MAIN"
+          test -s app/src/main/java/com/chiyuri/player/PlaybackSessionQueues.kt
+          grep -F 'tint = Color.White' app/src/main/java/com/chiyuri/player/GothicUi.kt
           ! grep -F 'screenOrientation=' app/src/main/AndroidManifest.xml
           test -s app/src/main/java/com/chiyuri/player/CustomEqualizerPresets.kt
           test -s app/src/test/java/com/chiyuri/player/CustomEqualizerPresetNameTest.kt
