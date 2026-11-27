@@ -2313,6 +2313,7 @@ jobs:
           test -s "$PKG/PlaybackWidgetActions.kt"
           test -s app/src/main/res/layout/widget_player.xml
           test -s app/src/main/res/xml/player_widget_info.xml
+          test -s app/src/main/res/values/widget_strings.xml
           grep -F "PlaybackWidgetProvider.updateAll" "$PKG/PlaybackService.kt"
           grep -F ".PlaybackWidgetActionReceiver" app/src/main/AndroidManifest.xml
           grep -F "30_000f" "$PKG/VideoGestureMath.kt"
