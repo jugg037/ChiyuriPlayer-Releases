@@ -156,7 +156,7 @@ p.write_text(s, encoding="utf-8")
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class MediaLibrarySortingTest {
+class MediaLibraryDuplicateDetectionTest {
     @Test fun likelyDuplicatesRequireSameTitleArtistAndNearDuration() {
         val items = listOf(
             MediaSortKey(1, "Song", "Artist", 180_000),
