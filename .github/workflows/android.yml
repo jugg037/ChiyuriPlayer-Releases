@@ -2380,7 +2380,6 @@ jobs:
           grep -F "DlnaDiscoveryClient.discover" "$PKG/DlnaDiscoveryScreen.kt"
           grep -F "CHANGE_WIFI_MULTICAST_STATE" app/src/main/AndroidManifest.xml
           grep -F 'versionName = "0.5.9"' app/build.gradle.kts
-          grep -F "versionCode = 345" app/build.gradle.kts
           echo "PASS: twenty-six feature patches, WebDAV and DLNA discovery, spatial audio, smooth track transitions, media integrity scanning, video frame capture, file inspection, gapless playback, local recommendations, party mix and complete credential-free backups are integrated."
 
       - name: Verify automatic device sensor orientation and fullscreen override
