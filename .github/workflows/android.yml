@@ -2276,7 +2276,7 @@ jobs:
           test -s "$PKG/RadioStationStore.kt"
           grep -F "https" "$PKG/RadioStationStore.kt"
           test -s "$PKG/VideoGestureMath.kt"
-          grep -F "pointerInput" "$PKG/MainActivity.kt"
+          grep -F "setOnTouchListener" "$PKG/MainActivity.kt"
           grep -F "AudioDeviceCallback" "$PKG/PlaybackService.kt"
           test -s "$PKG/AudioOutputProfiles.kt"
           grep -F "MediaLibraryService" "$PKG/PlaybackService.kt"
