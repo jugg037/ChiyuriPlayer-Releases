@@ -2265,7 +2265,8 @@ jobs:
               print(f"PYTHON_OK: {path}")
           PY
 
-      - name: Apply parallel audio, library, video, automation and network feature patches        run: |
+      - name: Apply parallel audio, library, video, automation and network feature patches
+        run: |
           set -euo pipefail
           for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py; do
             echo "===== Applying $patch ====="
