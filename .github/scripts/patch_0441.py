@@ -8,7 +8,6 @@ TEST = ROOT / "app/src/test/java/com/chiyuri/player"
 import android.content.Context
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
-import android.os.Build
 import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
@@ -27,15 +26,7 @@ object AudioOutputProfiles {
     fun activeDevice(context: Context): AudioDeviceInfo? {
         val manager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         return runCatching {
-            val outputs = if (Build.VERSION.SDK_INT >= 31) {
-                manager.getDevicesForAttributes(
-                    android.media.AudioAttributes.Builder()
-                        .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
-                        .build()
-                ).filter { it.isSink }
-            } else {
-                manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).filter { it.isSink }
-            }
+            val outputs = manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).filter { it.isSink }
             outputs.firstOrNull { it.type != AudioDeviceInfo.TYPE_BUILTIN_SPEAKER } ?: outputs.firstOrNull()
         }.getOrNull()
     }
