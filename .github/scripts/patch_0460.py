@@ -31,7 +31,7 @@ data class DlnaServerEndpoint(
 )
 
 internal fun parseSsdpResponse(raw: String): DlnaServerEndpoint? {
-    val lines = raw.split("\\r\\n")
+    val lines = raw.lineSequence().toList()
     val status = lines.firstOrNull().orEmpty()
     if (!status.startsWith("HTTP/1.1 200", ignoreCase = true) &&
         !status.startsWith("HTTP/1.0 200", ignoreCase = true)) return null
@@ -259,7 +259,15 @@ import org.junit.Test
 
 class DlnaSsdpParserTest {
     @Test fun parsesLocalMediaServerResponseCaseInsensitively() {
-        val response = """HTTP/1.1 200 OK\\r\\nLOCATION: http://192.168.1.25:1400/rootDesc.xml\\r\\nSERVER: Example DLNA/1.0\\r\\nUSN: uuid:media-server-1\\r\\nST: urn:schemas-upnp-org:device:MediaServer:1\\r\\n\\r\\n"""
+        val response = listOf(
+            "HTTP/1.1 200 OK",
+            "LOCATION: http://192.168.1.25:1400/rootDesc.xml",
+            "SERVER: Example DLNA/1.0",
+            "USN: uuid:media-server-1",
+            "ST: urn:schemas-upnp-org:device:MediaServer:1",
+            "",
+            ""
+        ).joinToString("\\n")
         val parsed = parseSsdpResponse(response)
         assertEquals("192.168.1.25", parsed?.host)
         assertEquals("Example DLNA/1.0", parsed?.serverHeader)
@@ -267,8 +275,8 @@ class DlnaSsdpParserTest {
     }
 
     @Test fun rejectsPublicAndMalformedLocations() {
-        val publicResponse = """HTTP/1.1 200 OK\\r\\nLOCATION: https://example.com/device.xml\\r\\n\\r\\n"""
-        val malformedResponse = """HTTP/1.1 200 OK\\r\\nSERVER: Missing location\\r\\n\\r\\n"""
+        val publicResponse = listOf("HTTP/1.1 200 OK", "LOCATION: https://example.com/device.xml", "", "").joinToString("\\n")
+        val malformedResponse = listOf("HTTP/1.1 200 OK", "SERVER: Missing location", "", "").joinToString("\\n")
         assertNull(parseSsdpResponse(publicResponse))
         assertNull(parseSsdpResponse(malformedResponse))
     }
