@@ -135,6 +135,8 @@ manager.write_text(s, encoding="utf-8")
 # Replace JSON-based tests with pure model tests that run on the JVM.
 p = TEST / "LibraryBackupManagerTest.kt"
 s = p.read_text(encoding="utf-8")
+if "import org.junit.Assert.assertEquals" not in s:
+    s = s.replace("import org.junit.Assert.assertFalse", "import org.junit.Assert.assertEquals\\nimport org.junit.Assert.assertFalse", 1)
 start = s.find("    @Test fun playbackHistoryExportFiltersUnsafeUrisAndBoundsFields() {")
 end = s.find("    @Test fun rejectsWhitespaceAndOversizedUris() {", start)
 if start < 0 or end < 0:
