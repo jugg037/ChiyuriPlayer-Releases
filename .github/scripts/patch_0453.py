@@ -590,7 +590,7 @@ replace_once(
 )
 replace_once(
     p,
-    '''                                ActionCard("Сетевые папки SMB", "Подключение к NAS и общим папкам по SMB 2/3", Icons.Default.FolderShared) { morePage = "SMB" }''',
+    '''                                ActionCard("Сетевые папки SMB", "Подключение к NAS и общим папкам компьютера", Icons.Default.FolderShared) { morePage = "SMB" }''',
     '''                                ActionCard("Сетевые папки SMB", "Подключение к NAS и общим папкам по SMB 2/3", Icons.Default.FolderShared) { morePage = "SMB" }
                                 ActionCard("Сетевые папки WebDAV", "Защищённое подключение к NAS и облачным хранилищам", Icons.Default.Cloud) { morePage = "WebDAV" }''',
     "WebDAV action card"
