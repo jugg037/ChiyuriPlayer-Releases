@@ -82,7 +82,7 @@ jobs:
       APP_VERSION_CODE: "444"
     steps:
       - name: Checkout public release repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Verify source archive
         run: |
@@ -2465,7 +2465,7 @@ jobs:
 
       - name: Upload patch remediation diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ChiyuriPlayer-patch-0426-diagnostics-${{ github.run_number }}
           path: patch_0426.log
@@ -2554,7 +2554,7 @@ jobs:
 
       - name: Upload platform audit diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ChiyuriPlayer-platform-audit-${{ github.run_number }}
           path: platform-audit.log
@@ -2622,7 +2622,7 @@ jobs:
           echo "Update install action is bound to the exact discovered versionCode."
 
       - name: Upload patched source for metadata audit
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ChiyuriPlayer-source-audit-${{ github.run_number }}
           path: |
@@ -2639,13 +2639,13 @@ jobs:
           retention-days: 3
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
           packages: platform-tools
 
@@ -2660,7 +2660,7 @@ jobs:
           test -f "$ANDROID_HOME/platforms/android-37/android.jar"
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "9.9.3"
 
@@ -2683,7 +2683,7 @@ jobs:
 
       - name: Upload unit test diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ChiyuriPlayer-unit-test-diagnostics-${{ github.run_number }}
           path: |
@@ -2700,7 +2700,7 @@ jobs:
 
       - name: Upload Android lint report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ChiyuriPlayer-lint-${{ github.run_number }}
           path: |
@@ -2764,7 +2764,7 @@ jobs:
           sha256sum "$APK" | tee ChiyuriPlayer-$APP_VERSION_NAME.sha256
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ChiyuriPlayer-${{ env.APP_VERSION_NAME }}
           path: |
