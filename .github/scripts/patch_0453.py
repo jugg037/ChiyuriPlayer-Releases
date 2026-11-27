@@ -72,7 +72,7 @@ internal fun webDavServerId(baseUrl: String): String =
 internal fun buildWebDavItemUri(serverId: String, relativePath: String): String? {
     if (!serverId.matches(Regex("^[a-f0-9]{16}$"))) return null
     val segments = relativePath.split('/').filter { it.isNotBlank() }
-    if (segments.any { it == "." || it == ".." || it.contains('\\') }) return null
+    if (segments.any { it == "." || it == ".." || it.contains('\\\\') }) return null
     val encoded = segments.joinToString("/") {
         URLEncoder.encode(it, "UTF-8").replace("+", "%20")
     }
@@ -83,7 +83,7 @@ internal fun resolveWebDavRequestUrl(baseUrl: String, relativePath: String): Str
     val normalized = normalizeWebDavBaseUrl(baseUrl) ?: return null
     val base = URI(normalized)
     val segments = relativePath.split('/').filter { it.isNotBlank() }
-    if (segments.any { it == "." || it == ".." || it.contains('\\') }) return null
+    if (segments.any { it == "." || it == ".." || it.contains('\\\\') }) return null
     val suffix = segments.joinToString("/") {
         URLEncoder.encode(it, "UTF-8").replace("+", "%20")
     }
