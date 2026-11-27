@@ -2679,7 +2679,7 @@ jobs:
       - name: Run unit tests
         run: |
           set -o pipefail
-          gradle testDebugUnitTest -PVERSION_CODE=${APP_VERSION_CODE} 2>&1 | tee unit-tests.log
+          gradle testDebugUnitTest --warning-mode all -PVERSION_CODE=${APP_VERSION_CODE} 2>&1 | tee unit-tests.log
 
       - name: Upload unit test diagnostics
         if: always()
@@ -2696,7 +2696,7 @@ jobs:
       - name: Run Android lint
         id: android_lint
         continue-on-error: true
-        run: gradle lintRelease -PVERSION_CODE=${APP_VERSION_CODE}
+        run: gradle lintRelease --warning-mode all -PVERSION_CODE=${APP_VERSION_CODE}
 
       - name: Upload Android lint report
         if: always()
@@ -2747,7 +2747,7 @@ jobs:
           test -n "$CHIYURI_KEYSTORE_PASSWORD"
           test -n "$CHIYURI_KEY_ALIAS"
           test -n "$CHIYURI_KEY_PASSWORD"
-          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=${APP_VERSION_CODE}
+          gradle --no-build-cache clean assembleRelease --warning-mode all -PVERSION_CODE=${APP_VERSION_CODE}
 
       - name: Verify APK signature
         run: |
