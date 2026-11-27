@@ -256,7 +256,7 @@ object WebDavNetworkClient {
                         val basePath = base.path.trimEnd('/') + "/"
                         val responsePath = resolved.path
                         if (responsePath.startsWith(basePath)) {
-                            val relative = responsePath.removePrefix(basePath).trim('/').let(Uri::decode)
+                            val relative = responsePath.removePrefix(basePath).trim('/').let { Uri.decode(it) }
                             if (relative.isNotBlank() && relative != currentPath.trim('/')) {
                                 val name = relative.substringAfterLast('/')
                                 val itemUri = buildWebDavItemUri(server.id, relative)
@@ -320,6 +320,7 @@ class WebDavDataSource(context: Context) : BaseDataSource(true) {
                 }
             }.build()
             val opened = WebDavHttp.client.newCall(request).execute()
+            response = opened
             if (!opened.isSuccessful) {
                 opened.close()
                 throw IOException("Не удалось открыть WebDAV-файл: HTTP ${opened.code}")
@@ -330,7 +331,6 @@ class WebDavDataSource(context: Context) : BaseDataSource(true) {
             }
             val stream = body.byteStream()
             if (opened.code == 200 && dataSpec.position > 0L) skipFully(stream, dataSpec.position)
-            response = opened
             input = stream
             val contentLength = body.contentLength().takeIf { it >= 0L } ?: C.LENGTH_UNSET.toLong()
             bytesRemaining = if (contentLength == C.LENGTH_UNSET.toLong()) contentLength
