@@ -2305,6 +2305,8 @@ jobs:
           grep -F "jcifs-ng" app/build.gradle.kts
           test -s "$PKG/LibraryBackupManager.kt"
           test -s "$PKG/LibraryBackupCard.kt"
+          grep -F "internal fun LibraryBackupCard()" "$PKG/LibraryBackupCard.kt"
+          ! grep -F "org.junit" "$PKG/LibraryBackupCard.kt"
           grep -F "LibraryBackupCard()" app/src/main/java/com/chiyuri/player/MainActivity.kt
           grep -F "isAllowedBackupUri" "$PKG/LibraryBackupManager.kt"
           test -s "$PKG/ReplayGainReader.kt"
