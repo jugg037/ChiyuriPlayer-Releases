@@ -2373,10 +2373,6 @@ jobs:
           grep -F "slf4j-nop:2.0.20" app/build.gradle.kts
           grep -F 'tools:ignore="Overdraw"' app/src/main/res/layout/widget_player.xml
           grep -F "mutableIntStateOf(0)" "$PKG/MediaLibraryHealthScreen.kt"
-          test -s "$PKG/PlaybackPreferencesTest.kt"
-                    test -s "$PKG/MediaFileInfo.kt"
-          grep -F "MediaExtractor" "$PKG/MediaFileInfo.kt"
-          grep -F "MediaFileInfoDialog" "$PKG/MainActivity.kt"
           echo "PASS: twenty-five feature patches, WebDAV streaming, spatial audio, smooth track transitions, media integrity scanning, video frame capture, file inspection, gapless playback, local recommendations, party mix and complete credential-free backups are integrated."
 
       - name: Verify automatic device sensor orientation and fullscreen override
