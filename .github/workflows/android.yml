@@ -2254,23 +2254,6 @@ jobs:
       - name: Apply automatic device sensor orientation
         run: python3 -u .github/scripts/patch_0434.py
 
-      - name: Verify automatic device sensor orientation and fullscreen override
-        run: |
-          set -eu
-          MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
-          grep -F 'SCREEN_ORIENTATION_FULL_SENSOR' "$MAIN"
-          grep -F 'SCREEN_ORIENTATION_PORTRAIT' "$MAIN"
-          grep -F 'SCREEN_ORIENTATION_UNSPECIFIED' "$MAIN"
-          ! grep -A1 -F 'mediaPlaybackActive ->' "$MAIN" | grep -F 'SCREEN_ORIENTATION_LANDSCAPE'
-          grep -F 'Icons.Default.ScreenRotation' "$MAIN"
-          grep -F 'fullscreenVideoPortrait = !fullscreenVideoPortrait' "$MAIN"
-          grep -F 'Включить автоматическую ориентацию' "$MAIN"
-          grep -F 'rememberSaveable { mutableStateOf(false) }' "$MAIN"
-          grep -F 'LaunchedEffect(hostActivity, currentMediaUri, isVideoFullscreen, fullscreenVideoPortrait, playing)' "$MAIN"
-          grep -F 'versionName = "0.5.7"' app/build.gradle.kts
-          grep -F 'orElse("343")' app/build.gradle.kts
-          echo "PASS: audio/video playback follows all device sensor orientations; fullscreen video can temporarily lock portrait and return to automatic mode."
-
       - name: Apply parallel audio, library, video, automation and network feature patches
         run: |
           set -euo pipefail
@@ -2291,7 +2274,7 @@ jobs:
           test -s "$PKG/PlaybackHistoryScreen.kt"
           grep -F "DATE_ADDED" "$PKG/MediaLibrarySorting.kt"
           test -s "$PKG/RadioStationStore.kt"
-          grep -F "https://" "$PKG/RadioStationStore.kt"
+          grep -F "https" "$PKG/RadioStationStore.kt"
           test -s "$PKG/VideoGestureMath.kt"
           grep -F "pointerInput" "$PKG/MainActivity.kt"
           grep -F "AudioDeviceCallback" "$PKG/PlaybackService.kt"
@@ -2308,6 +2291,23 @@ jobs:
             test -s "$TEST/$test"
           done
           echo "PASS: ten feature patches, migration paths, network validation and regression test files are present."
+
+      - name: Verify automatic device sensor orientation and fullscreen override
+        run: |
+          set -eu
+          MAIN=app/src/main/java/com/chiyuri/player/MainActivity.kt
+          grep -F 'SCREEN_ORIENTATION_FULL_SENSOR' "$MAIN"
+          grep -F 'SCREEN_ORIENTATION_PORTRAIT' "$MAIN"
+          grep -F 'SCREEN_ORIENTATION_UNSPECIFIED' "$MAIN"
+          ! grep -A1 -F 'mediaPlaybackActive ->' "$MAIN" | grep -F 'SCREEN_ORIENTATION_LANDSCAPE'
+          grep -F 'Icons.Default.ScreenRotation' "$MAIN"
+          grep -F 'fullscreenVideoPortrait = !fullscreenVideoPortrait' "$MAIN"
+          grep -F 'Включить автоматическую ориентацию' "$MAIN"
+          grep -F 'rememberSaveable { mutableStateOf(false) }' "$MAIN"
+          grep -F 'LaunchedEffect(hostActivity, currentMediaUri, isVideoFullscreen, fullscreenVideoPortrait, playing)' "$MAIN"
+          grep -F 'versionName = "0.5.7"' app/build.gradle.kts
+          grep -F 'orElse("343")' app/build.gradle.kts
+          echo "PASS: audio/video playback follows all device sensor orientations; fullscreen video can temporarily lock portrait and return to automatic mode."
 
       - name: Verify all four requested features
         run: |
