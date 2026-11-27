@@ -12,6 +12,8 @@ replace_once(placeholder, 'assertEquals(3f, normalized.playerVolume, 0f)', 'asse
 gesture = PKG / 'VideoGestureMath.kt'
 replace_once(gesture, 'distancePx / viewWidthPx.toFloat() * 60_000f', 'distancePx / viewWidthPx.toFloat() * 30_000f')
 replace_once(gesture, 'distanceYpx / viewHeightPx.toFloat() * maxLevel', 'distanceYpx / viewHeightPx.toFloat() * maxLevel * 0.5f')
+videoTests = Path('app/src/test/java/com/chiyuri/player/VideoGestureMathTest.kt')
+replace_once(videoTests, 'assertEquals(25, videoSwipeLevel(50, 25f, 100, 100))', 'assertEquals(37, videoSwipeLevel(50, 25f, 100, 100))')
 paging = PKG / 'MediaLibraryPaging.kt'
 replace_once(paging, '    val start = (page.toLong() * pageSize).coerceAtMost(items.size.toLong()).toInt()\n    val end = (start + pageSize).coerceAtMost(items.size)\n', '    if (items.isEmpty()) return emptyList()\n    val lastPage = (items.lastIndex / pageSize).coerceAtLeast(0)\n    val safePage = page.coerceAtMost(lastPage)\n    val start = safePage * pageSize\n    val end = (start + pageSize).coerceAtMost(items.size)\n')
 print('patch_0448: aligned legacy volume tests with 10-band/200% rules, tuned video gesture sensitivity and clamped Android Auto pagination')
