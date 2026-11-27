@@ -2369,7 +2369,7 @@ jobs:
           grep -F 'transition_fade_ms' "$PKG/PlaybackPreferencesStore.kt"
           grep -F 'calculateFadeOutGain' "$PKG/PlaybackService.kt"
           grep -F 'Плавный переход' "$PKG/PartyModeScreen.kt"
-          grep -E 'gradle-9.9.3-(bin|all)\\.zip' gradle/wrapper/gradle-wrapper.properties
+          grep -E 'gradle-9.9.3-(bin|all)\.zip' gradle/wrapper/gradle-wrapper.properties
           grep -F "slf4j-nop:2.0.20" app/build.gradle.kts
           grep -F 'tools:ignore="Overdraw"' app/src/main/res/layout/widget_player.xml
           grep -F "mutableIntStateOf(0)" "$PKG/MediaLibraryHealthScreen.kt"
