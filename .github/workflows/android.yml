@@ -2334,7 +2334,7 @@ jobs:
           grep -F "0.5f" "$PKG/VideoGestureMath.kt"
           grep -F "lastPage" "$PKG/MediaLibraryPaging.kt"
           grep -F "versionName = \"0.5.9\"" app/build.gradle.kts
-          grep -F "orElse(\"344\")" app/build.gradle.kts
+          grep -F 'orElse("345")' app/build.gradle.kts
           for test in EqualizerPresetsTest.kt AudioEffectsSettingsTest.kt PlaybackHistoryStoreTest.kt MediaLibrarySortingTest.kt RadioStationStoreTest.kt VideoGestureMathTest.kt PlaybackOutputReconnectTest.kt AudioOutputProfileKeyTest.kt MediaLibraryPaginationTest.kt SmbAddressTest.kt LibraryBackupManagerTest.kt ReplayGainReaderTest.kt PlaybackWidgetActionsTest.kt LocalRecommendationsTest.kt MediaFileInfoFormattingTest.kt WebDavAddressTest.kt MediaLibraryHealthTest.kt VideoFrameCaptureTest.kt PlaybackPreferencesTest.kt DlnaSsdpParserTest.kt; do
             test -s "$TEST/$test"
           done
