@@ -9,13 +9,12 @@ def replace_once(path: Path, old: str, new: str, label: str):
 PKG = Path("app/src/main/java/com/chiyuri/player")
 TEST = Path("app/src/test/java/com/chiyuri/player")
 
-# The five-band legacy curve is padded/resampled before normalization; the generic
-# normalizer itself deliberately clamps the ten-band configuration it receives.
+# The five-band legacy curve is interpolated into ten bands; verify representative points with tolerance.
 p = TEST / "PlaceholderTest.kt"
 replace_once(
     p,
     "assertEquals(12f, normalized.bandsDb.last(), 0f)",
-    "assertEquals(listOf(-12f, -6f, 0f, 8f, 12f, 0f, 0f, 0f, 0f, 0f), normalized.bandsDb)",
+    "assertEquals(-12f, normalized.bandsDb[1], 0.001f)\\n        assertEquals(-8.666666f, normalized.bandsDb[2], 0.001f)\\n        assertEquals(-4f, normalized.bandsDb[3], 0.001f)\\n        assertEquals(1.7777786f, normalized.bandsDb[5], 0.001f)\\n        assertEquals(10.444446f, normalized.bandsDb[7], 0.001f)",
     "ten-band normalized legacy assertion"
 )
 
