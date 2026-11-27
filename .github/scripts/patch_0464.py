@@ -1,7 +1,7 @@
 from pathlib import Path
 p=Path("app/src/main/java/com/chiyuri/player")
 def rep(file,old,new,label):
- old=old.replace("\\\${", "\${"); new=new.replace("\\\${", "\${")
+ old=old.replace("\\$", "$"); new=new.replace("\\$", "$")
  f=p/file; s=f.read_text(encoding="utf-8"); n=s.count(old)
  if n!=1: raise SystemExit(f"patch_0464 {label}: expected 1, found {n}")
  f.write_text(s.replace(old,new,1),encoding="utf-8")
