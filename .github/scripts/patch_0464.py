@@ -16,10 +16,10 @@ append='''    fun append(context: Context, kind: String, item: MediaItem) {
     }
 '''
 f.write_text(s.replace(anchor,append+anchor,1),encoding="utf-8")
-rep("SmbLibraryScreen.kt",'''                    Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+rep("SmbLibraryScreen.kt",r'''                    Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
                         Text(if (entry.isDirectory) "📁 \${entry.name}" else entry.name, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
                         if (!entry.isDirectory) Text("\${entry.mimeType ?: "Файл"} • \${entry.sizeBytes / 1024} КБ", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                    }''','''                    Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    }''',r'''                    Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(if (entry.isDirectory) "📁 \${entry.name}" else entry.name, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
                             if (!entry.isDirectory) Text("\${entry.mimeType ?: "Файл"} • \${entry.sizeBytes / 1024} КБ", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
@@ -30,10 +30,10 @@ rep("SmbLibraryScreen.kt",'''                    Column(Modifier.padding(horizon
                             PlaybackSessionQueues.append(context, "network", item)
                         }) { GothicIcon(Icons.Default.PlaylistAdd, "Добавить в сетевую очередь") }
                     }''',"SMB queue add button")
-rep("WebDavLibraryScreen.kt",'''                        Column(Modifier.weight(1f)) {
+rep("WebDavLibraryScreen.kt",r'''                        Column(Modifier.weight(1f)) {
                             Text(entry.name, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
                             if (!entry.isDirectory) Text("\${entry.mimeType ?: "Файл"} • \${entry.sizeBytes / 1024} КБ", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                        }''','''                        Column(Modifier.weight(1f)) {
+                        }''',r'''                        Column(Modifier.weight(1f)) {
                             Text(entry.name, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
                             if (!entry.isDirectory) Text("\${entry.mimeType ?: "Файл"} • \${entry.sizeBytes / 1024} КБ", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                         }
