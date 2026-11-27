@@ -19,7 +19,7 @@ import java.nio.charset.StandardCharsets
 /** Reads ReplayGain track tags without loading the audio payload into memory. */
 internal object ReplayGainReader {
     private const val MAX_METADATA_BYTES = 2 * 1024 * 1024
-    private val gainPattern = Regex("""(-?\\d+(?:\\.\\d+)?)\\s*dB""", RegexOption.IGNORE_CASE)
+    private val gainPattern = Regex("""(-?\d+(?:\.\d+)?)\s*dB""", RegexOption.IGNORE_CASE)
 
     fun read(context: Context, uri: Uri): Float? {
         if (uri.scheme !in setOf("content", "file")) return null
