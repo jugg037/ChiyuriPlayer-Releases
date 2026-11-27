@@ -192,6 +192,16 @@ p = TEST / "CustomEqualizerPresetNameTest.kt"
 s = p.read_text(encoding="utf-8").replace('List(5) { 0f }', 'List(10) { 0f }')
 p.write_text(s, encoding="utf-8")
 
+
+# Keep the original gain regression test aligned with the strict 200% ceiling.
+p = TEST / "PlaceholderTest.kt"
+s = p.read_text(encoding="utf-8")
+old = "assertEquals(954, volumeBoostToMillibels(3f))"
+new = "assertEquals(602, volumeBoostToMillibels(2f))"
+if old not in s:
+    raise SystemExit("patch_0435: legacy volume boost test anchor missing")
+p.write_text(s.replace(old, new, 1), encoding="utf-8")
+
 p = TEST / "AudioEffectsSettingsTest.kt"
 p.write_text('''package com.chiyuri.player
 
