@@ -249,6 +249,7 @@ gradle = Path("app/build.gradle.kts")
 gs = gradle.read_text(encoding="utf-8")
 gs = gs.replace('versionName = "0.5.8"', 'versionName = "0.5.9"')
 gs = gs.replace("versionCode = 344", "versionCode = 345")
+gs = gs.replace('orElse("344")', 'orElse("345")')
 gradle.write_text(gs, encoding="utf-8")
 
 (TEST / "DlnaSsdpParserTest.kt").write_text('''package com.chiyuri.player
