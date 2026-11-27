@@ -8,6 +8,29 @@ def replace_once(path: Path, old: str, new: str, label: str):
 
 PKG = Path("app/src/main/java/com/chiyuri/player")
 TEST = Path("app/src/test/java/com/chiyuri/player")
+# Keep the global baseline separate from the active device profile.
+settings = PKG / "AudioEffectsSettings.kt"
+settingsSource = settings.read_text(encoding="utf-8")
+if "internal fun saveGlobal(context: Context, config: AudioEffectsConfig)" not in settingsSource:
+    anchor = "    fun save(context: Context, config: AudioEffectsConfig) {"
+    if anchor not in settingsSource:
+        raise SystemExit("patch_0450: global audio settings save anchor missing")
+    globalSave = """    internal fun saveGlobal(context: Context, config: AudioEffectsConfig) {
+        val normalized = normalizeAudioEffectsConfig(config)
+        context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE).edit {
+            putBoolean(KEY_EQUALIZER_ENABLED, normalized.equalizerEnabled)
+            putFloat(KEY_PLAYER_VOLUME, normalized.playerVolume)
+            putBoolean(KEY_REPLAYGAIN_ENABLED, normalized.replayGainEnabled)
+            normalized.bandsDb.forEachIndexed { index, value ->
+                putFloat(KEY_BAND_PREFIX + index, value)
+            }
+        }
+    }
+
+"""
+    settingsSource = settingsSource.replace(anchor, globalSave + anchor, 1)
+    settings.write_text(settingsSource, encoding="utf-8")
+
 p = PKG / "LibraryBackupManager.kt"
 s = p.read_text(encoding="utf-8")
 
@@ -111,7 +134,7 @@ helpers = '''    internal fun sanitizePlaybackHistory(raw: JSONArray): JSONArray
             safe.put(JSONObject()
                 .put("uri", uri)
                 .put("title", title)
-                .put("artist", artist.ifBlank { JSONObject.NULL })
+                .put("artist", if (artist.isBlank()) JSONObject.NULL else artist)
                 .put("duration_ms", item.optLong("duration_ms", 0L).coerceIn(0L, 86_400_000L))
                 .put("last_played_at", item.optLong("last_played_at", 0L).coerceAtLeast(0L))
                 .put("play_count", item.optInt("play_count", 1).coerceIn(1, 100_000)))
