@@ -9,6 +9,8 @@ replace_once(placeholder, 'assertEquals(listOf(-12f, -6f, 0f, 8f, 12f), normaliz
 replace_once(placeholder, 'assertEquals(2.5f, normalized.playerVolume, 0f)', 'assertEquals(2f, normalized.playerVolume, 0f)')
 replace_once(placeholder, 'assertEquals(listOf(0f, 0f, 0f, 0f, 0f), normalized.bandsDb)', 'assertEquals(List(10) { 0f }, normalized.bandsDb)')
 replace_once(placeholder, 'assertEquals(3f, normalized.playerVolume, 0f)', 'assertEquals(2f, normalized.playerVolume, 0f)')
+audioSettings = PKG / 'AudioEffectsSettings.kt'
+replace_once(audioSettings, 'bandsDb = List(10) { index ->\n            bounded(config.bandsDb.getOrElse(index) { 0f }, -12f, 12f, 0f)\n        },', 'bandsDb = resampleEqualizerBands(config.bandsDb, 10).map { bounded(it, -12f, 12f, 0f) },')
 gesture = PKG / 'VideoGestureMath.kt'
 replace_once(gesture, 'distancePx / viewWidthPx.toFloat() * 60_000f', 'distancePx / viewWidthPx.toFloat() * 30_000f')
 replace_once(gesture, 'distanceYpx / viewHeightPx.toFloat() * maxLevel', 'distanceYpx / viewHeightPx.toFloat() * maxLevel * 0.5f')
