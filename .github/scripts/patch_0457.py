@@ -52,7 +52,7 @@ p.write_text(s, encoding="utf-8")
 
 p = PKG / "AudioEffectsController.kt"
 s = p.read_text(encoding="utf-8")
-s = s.replace("import android.media.audiofx.LoudnessEnhancer", "import android.media.audiofx.LoudnessEnhancer\nimport android.media.audiofx.Virtualizer", 1)
+s = s.replace("import android.media.audiofx.LoudnessEnhancer", "import android.media.audiofx.AudioEffect\nimport android.media.audiofx.LoudnessEnhancer\nimport android.media.audiofx.Virtualizer", 1)
 s = s.replace("    private var loudnessEnhancer: LoudnessEnhancer? = null", "    private var loudnessEnhancer: LoudnessEnhancer? = null\n    private var virtualizer: Virtualizer? = null", 1)
 s = s.replace("        loudnessEnhancer = runCatching { LoudnessEnhancer(audioSessionId) }.getOrNull()", "        loudnessEnhancer = runCatching { LoudnessEnhancer(audioSessionId) }.getOrNull()\n        virtualizer = runCatching { Virtualizer(0, audioSessionId) }.getOrNull()", 1)
 anchor = '''        equalizer?.let { effect ->
