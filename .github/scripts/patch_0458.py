@@ -198,6 +198,7 @@ p = PKG / "PartyModeScreen.kt"
 s = p.read_text(encoding="utf-8")
 if "import androidx.compose.material3.Slider" not in s:
     s = s.replace("import androidx.compose.material3.Switch", "import androidx.compose.material3.Switch\nimport androidx.compose.material3.Slider", 1)
+p.write_text(s, encoding="utf-8")
 replace_once(
     p,
     '''                )
@@ -241,7 +242,6 @@ internal fun PartyModeScreen''',
 internal fun PartyModeScreen''',
     "transition fade slider"
 )
-p.write_text(s, encoding="utf-8")
 
 (TEST / "PlaybackPreferencesTest.kt").write_text('''package com.chiyuri.player
 
