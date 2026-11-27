@@ -127,14 +127,14 @@ s = s.replace(
                 PlaybackQueueStore.save(this@PlaybackService, player)''',
     '''                PlaybackWidgetProvider.updateAll(this@PlaybackService, player)
                 applyReplayGainFor(player, mediaItem)
-                if (transitionFadingOut) {
+                if (transitionFadingOut || reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
                     transitionFadingOut = false
                     transitionFadeInStartedAtMs = SystemClock.elapsedRealtime()
                 }
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                if (!isPlaying) {
+                if (!isPlaying && !player.playWhenReady) {
                     transitionFadingOut = false
                     transitionFadeInStartedAtMs = -1L
                     audioEffectsController?.setTransitionGain(1f)
