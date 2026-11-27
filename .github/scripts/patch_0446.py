@@ -290,8 +290,6 @@ audioTests = TEST / 'AudioEffectsSettingsTest.kt'
 replace_once(audioTests, 'import org.junit.Assert.assertEquals\n', 'import org.junit.Assert.assertEquals\nimport org.junit.Assert.assertFalse\n')
 replace_once(audioTests, '    @Test fun playerBoostIsCappedAtTwoTimesTotalOutput() {', '    @Test fun replayGainCanBeDisabledWithoutChangingOtherAudioSettings() {\n        assertTrue(AudioEffectsConfig().replayGainEnabled)\n        assertFalse(normalizeAudioEffectsConfig(AudioEffectsConfig(replayGainEnabled = false)).replayGainEnabled)\n    }\n\n    @Test fun playerBoostIsCappedAtTwoTimesTotalOutput() {')
 
-backup = Path('.github/scripts/patch_0445.py')
-replace_once(backup, '.put("player_volume", config.playerVolume)\n            .put("bands", JSONArray(config.bandsDb))', '.put("player_volume", config.playerVolume)\n            .put("replay_gain_enabled", config.replayGainEnabled)\n            .put("bands", JSONArray(config.bandsDb))')
-replace_once(backup, 'playerVolume = configObject.optDouble("player_volume", 1.0).toFloat()\n', 'playerVolume = configObject.optDouble("player_volume", 1.0).toFloat(),\n                replayGainEnabled = configObject.optBoolean("replay_gain_enabled", true)\n')
+
 
 print('patch_0446: ID3/FLAC ReplayGain parsing, per-output toggle, safe gain ceiling and async track integration applied')
