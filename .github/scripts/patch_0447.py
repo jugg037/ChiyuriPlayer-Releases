@@ -207,7 +207,8 @@ layout = r'''<?xml version="1.0" encoding="utf-8"?>
 </LinearLayout>
 '''
 info = r'''<?xml version="1.0" encoding="utf-8"?>
-<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"\n    android:description="@string/widget_description"
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_description"
     android:minWidth="250dp"
     android:minHeight="72dp"
     android:minResizeWidth="220dp"
