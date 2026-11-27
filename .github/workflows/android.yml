@@ -41,6 +41,7 @@ on:
       - ".github/scripts/patch_0447.py"
       - ".github/scripts/patch_0448.py"
       - ".github/scripts/patch_0449.py"
+      - ".github/scripts/patch_0450.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
@@ -2272,7 +2273,7 @@ jobs:
       - name: Apply parallel audio, library, video, automation and network feature patches
         run: |
           set -euo pipefail
-          for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py .github/scripts/patch_0446.py .github/scripts/patch_0447.py .github/scripts/patch_0448.py .github/scripts/patch_0449.py; do
+          for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py .github/scripts/patch_0446.py .github/scripts/patch_0447.py .github/scripts/patch_0448.py .github/scripts/patch_0449.py .github/scripts/patch_0450.py; do
             echo "===== Applying $patch ====="
             python3 -u "$patch" | tee "patch_${patch##*_}.log"
           done
@@ -2719,6 +2720,7 @@ jobs:
             - Добавлена автоматическая нормализация ReplayGain для MP3/FLAC по встроенным тегам; усиление и ReplayGain совместно ограничены уровнем 200%.
             - Добавлены локальные рекомендации и режим вечеринки с перемешиванием библиотеки, повтором очереди и подбором по истории и избранному.
             - Добавлена настраиваемая Gapless Playback для перехода между совместимыми композициями без намеренной паузы.
+            - Резервные копии теперь включают историю прослушивания, профили звука устройств и режим Gapless; пароли сетевых серверов по-прежнему не экспортируются.
             - Добавлен Android-виджет рабочего стола с названием трека и кнопками назад, воспроизведение/пауза и вперёд.
             - Исправлены границы страниц Android Auto, чувствительность видеожестов и регрессионные проверки переноса эквалайзера на 10 полос и ограничения усиления 200%.
             - Аудио и видео автоматически следуют за ориентацией устройства по датчику.
