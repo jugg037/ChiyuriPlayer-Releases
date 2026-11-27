@@ -40,6 +40,7 @@ on:
       - ".github/scripts/patch_0446.py"
       - ".github/scripts/patch_0447.py"
       - ".github/scripts/patch_0448.py"
+      - ".github/scripts/patch_0449.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
@@ -2271,7 +2272,7 @@ jobs:
       - name: Apply parallel audio, library, video, automation and network feature patches
         run: |
           set -euo pipefail
-          for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py .github/scripts/patch_0446.py .github/scripts/patch_0447.py .github/scripts/patch_0448.py; do
+          for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py .github/scripts/patch_0446.py .github/scripts/patch_0447.py .github/scripts/patch_0448.py .github/scripts/patch_0449.py; do
             echo "===== Applying $patch ====="
             python3 -u "$patch" | tee "patch_${patch##*_}.log"
           done
@@ -2321,7 +2322,7 @@ jobs:
           grep -F "lastPage" "$PKG/MediaLibraryPaging.kt"
           grep -F "versionName = \"0.5.8\"" app/build.gradle.kts
           grep -F "orElse(\"344\")" app/build.gradle.kts
-          for test in EqualizerPresetsTest.kt AudioEffectsSettingsTest.kt PlaybackHistoryStoreTest.kt MediaLibrarySortingTest.kt RadioStationStoreTest.kt VideoGestureMathTest.kt PlaybackOutputReconnectTest.kt AudioOutputProfileKeyTest.kt MediaLibraryPaginationTest.kt SmbAddressTest.kt LibraryBackupManagerTest.kt ReplayGainReaderTest.kt PlaybackWidgetActionsTest.kt; do
+          for test in EqualizerPresetsTest.kt AudioEffectsSettingsTest.kt PlaybackHistoryStoreTest.kt MediaLibrarySortingTest.kt RadioStationStoreTest.kt VideoGestureMathTest.kt PlaybackOutputReconnectTest.kt AudioOutputProfileKeyTest.kt MediaLibraryPaginationTest.kt SmbAddressTest.kt LibraryBackupManagerTest.kt ReplayGainReaderTest.kt PlaybackWidgetActionsTest.kt LocalRecommendationsTest.kt; do
             test -s "$TEST/$test"
           done
           echo "PASS: fourteen feature patches, migration paths, network validation and regression test files are present."
@@ -2716,6 +2717,8 @@ jobs:
             - Добавлены SMB 2/3: просмотр сетевых папок, потоковое чтение и шифрование сохранённых паролей через Android Keystore.
             - Добавлен экспорт и восстановление резервной копии плейлистов, избранного, настроек звука, пресетов эквалайзера и радиостанций; секреты сетевых подключений не попадают в архив.
             - Добавлена автоматическая нормализация ReplayGain для MP3/FLAC по встроенным тегам; усиление и ReplayGain совместно ограничены уровнем 200%.
+            - Добавлены локальные рекомендации и режим вечеринки с перемешиванием библиотеки, повтором очереди и подбором по истории и избранному.
+            - Добавлена настраиваемая Gapless Playback для перехода между совместимыми композициями без намеренной паузы.
             - Добавлен Android-виджет рабочего стола с названием трека и кнопками назад, воспроизведение/пауза и вперёд.
             - Исправлены границы страниц Android Auto, чувствительность видеожестов и регрессионные проверки переноса эквалайзера на 10 полос и ограничения усиления 200%.
             - Аудио и видео автоматически следуют за ориентацией устройства по датчику.
