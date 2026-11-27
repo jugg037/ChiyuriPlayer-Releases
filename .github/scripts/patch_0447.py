@@ -60,8 +60,8 @@ class PlaybackWidgetProvider : AppWidgetProvider() {
 
         private fun placeholder(context: Context, widgetId: Int): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_player)
-            views.setTextViewText(R.id.widget_title, "ChiyuriPlayer")
-            views.setTextViewText(R.id.widget_artist, "Откройте плеер для воспроизведения")
+            views.setTextViewText(R.id.widget_title, context.getString(R.string.widget_player_title))
+            views.setTextViewText(R.id.widget_artist, context.getString(R.string.widget_open_player))
             views.setImageViewResource(R.id.widget_play_pause, android.R.drawable.ic_media_play)
             attachActions(context, views, widgetId)
             return views
@@ -71,8 +71,8 @@ class PlaybackWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.widget_player)
             val title = player.mediaMetadata.title?.toString()?.take(100).orEmpty()
             val artist = player.mediaMetadata.artist?.toString()?.take(100).orEmpty()
-            views.setTextViewText(R.id.widget_title, title.ifBlank { "ChiyuriPlayer" })
-            views.setTextViewText(R.id.widget_artist, artist.ifBlank { if (player.mediaItemCount > 0) " " else "Ничего не воспроизводится" })
+            views.setTextViewText(R.id.widget_title, title.ifBlank { context.getString(R.string.widget_player_title) })
+            views.setTextViewText(R.id.widget_artist, artist.ifBlank { if (player.mediaItemCount > 0) " " else context.getString(R.string.widget_no_playback) })
             views.setImageViewResource(
                 R.id.widget_play_pause,
                 if (player.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
@@ -150,7 +150,7 @@ layout = r'''<?xml version="1.0" encoding="utf-8"?>
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:padding="12dp"
-    android:background="#171014">
+    android:background="@android:color/black">
 
     <LinearLayout
         android:layout_width="0dp"
@@ -165,8 +165,8 @@ layout = r'''<?xml version="1.0" encoding="utf-8"?>
             android:layout_height="wrap_content"
             android:maxLines="1"
             android:ellipsize="end"
-            android:text="ChiyuriPlayer"
-            android:textColor="#FFFFFF"
+            android:text="@string/widget_player_title"
+            android:textColor="@android:color/white"
             android:textStyle="bold"
             android:textSize="14sp" />
 
@@ -176,8 +176,8 @@ layout = r'''<?xml version="1.0" encoding="utf-8"?>
             android:layout_height="wrap_content"
             android:maxLines="1"
             android:ellipsize="end"
-            android:text="Ничего не воспроизводится"
-            android:textColor="#D0C6CB"
+            android:text="@string/widget_no_playback"
+            android:textColor="@android:color/darker_gray"
             android:textSize="12sp" />
     </LinearLayout>
 
@@ -187,7 +187,7 @@ layout = r'''<?xml version="1.0" encoding="utf-8"?>
         android:layout_height="44dp"
         android:background="@android:color/transparent"
         android:src="@android:drawable/ic_media_previous"
-        android:contentDescription="Предыдущий трек" />
+        android:contentDescription="@string/widget_previous" />
 
     <ImageButton
         android:id="@+id/widget_play_pause"
@@ -195,7 +195,7 @@ layout = r'''<?xml version="1.0" encoding="utf-8"?>
         android:layout_height="48dp"
         android:background="@android:color/transparent"
         android:src="@android:drawable/ic_media_play"
-        android:contentDescription="Воспроизведение или пауза" />
+        android:contentDescription="@string/widget_play_pause" />
 
     <ImageButton
         android:id="@+id/widget_next"
@@ -203,11 +203,11 @@ layout = r'''<?xml version="1.0" encoding="utf-8"?>
         android:layout_height="44dp"
         android:background="@android:color/transparent"
         android:src="@android:drawable/ic_media_next"
-        android:contentDescription="Следующий трек" />
+        android:contentDescription="@string/widget_next" />
 </LinearLayout>
 '''
 info = r'''<?xml version="1.0" encoding="utf-8"?>
-<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"\n    android:description="@string/widget_description"
     android:minWidth="250dp"
     android:minHeight="72dp"
     android:minResizeWidth="220dp"
@@ -217,11 +217,24 @@ info = r'''<?xml version="1.0" encoding="utf-8"?>
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />
 '''
+ 
+strings = r'''<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_player_title">ChiyuriPlayer</string>
+    <string name="widget_no_playback">Ничего не воспроизводится</string>
+    <string name="widget_open_player">Откройте плеер для воспроизведения</string>
+    <string name="widget_previous">Предыдущий трек</string>
+    <string name="widget_play_pause">Воспроизведение или пауза</string>
+    <string name="widget_next">Следующий трек</string>
+    <string name="widget_description">Управление воспроизведением ChiyuriPlayer</string>
+</resources>
+'''
 write(PKG / 'PlaybackWidgetActions.kt', actions)
 write(PKG / 'PlaybackWidgetProvider.kt', provider)
 write(TEST / 'PlaybackWidgetActionsTest.kt', test)
 write(Path('app/src/main/res/layout/widget_player.xml'), layout)
 write(Path('app/src/main/res/xml/player_widget_info.xml'), info)
+write(Path('app/src/main/res/values/widget_strings.xml'), strings)
 manifest = Path('app/src/main/AndroidManifest.xml')
 receiver = '''\n        <receiver android:name=".PlaybackWidgetProvider" android:exported="true">\n            <intent-filter>\n                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />\n            </intent-filter>\n            <meta-data android:name="android.appwidget.provider" android:resource="@xml/player_widget_info" />\n        </receiver>\n        <receiver android:name=".PlaybackWidgetActionReceiver" android:exported="false" />\n'''
 replace_once(manifest, '</application>', receiver + '    </application>')
