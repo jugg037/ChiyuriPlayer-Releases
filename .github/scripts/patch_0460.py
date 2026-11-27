@@ -250,7 +250,7 @@ gs = gradle.read_text(encoding="utf-8")
 gs = gs.replace('versionName = "0.5.8"', 'versionName = "0.5.9"')
 gs = gs.replace("versionCode = 344", "versionCode = 345")
 gs = gs.replace('orElse("344")', 'orElse("345")')
-gs, _ = re.subn(r'orElse\("\\d+"\)', 'orElse("345")', gs)
+gs, _ = re.subn(r'orElse\("\d+"\)', 'orElse("345")', gs)
 if 'orElse("345")' not in gs:
     raise SystemExit("patch_0460: Gradle fallback version code was not updated")
 gradle.write_text(gs, encoding="utf-8")
