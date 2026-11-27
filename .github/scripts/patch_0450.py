@@ -224,6 +224,10 @@ insert = '''    @Test fun playbackHistoryExportFiltersUnsafeUrisAndBoundsFields(
 '''
 if anchor not in s: raise SystemExit("patch_0450: backup test insertion anchor missing")
 s = s.replace(anchor, insert + anchor, 1)
-p.write_text(s, encoding="utf-8")
+test.write_text(s, encoding="utf-8")
+if "class LibraryBackupManagerTest" not in test.read_text(encoding="utf-8"):
+    raise SystemExit("patch_0450: backup regression tests were not written")
+if "internal fun LibraryBackupCard()" not in (PKG / "LibraryBackupCard.kt").read_text(encoding="utf-8"):
+    raise SystemExit("patch_0450: backup card source was unexpectedly modified")
 
 print("patch_0450: backup and restore now include bounded history, per-device audio profiles and gapless preference without exporting credentials")
