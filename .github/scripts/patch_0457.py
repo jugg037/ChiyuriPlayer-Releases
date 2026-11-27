@@ -141,7 +141,7 @@ replace_once(
 p = TEST / "AudioEffectsSettingsTest.kt"
 s = p.read_text(encoding="utf-8")
 if "spatialEffectFlagSurvivesNormalization" not in s:
-    anchor = "    @Test fun clampsVolumeBoostToTwoHundredPercent() {"
+    anchor = "    @Test fun playerBoostIsCappedAtTwoTimesTotalOutput() {"
     test = '''    @Test fun spatialEffectFlagSurvivesNormalization() {
         assertTrue(normalizeAudioEffectsConfig(AudioEffectsConfig(spatialEnabled = true)).spatialEnabled)
         assertFalse(normalizeAudioEffectsConfig(AudioEffectsConfig(spatialEnabled = false)).spatialEnabled)
