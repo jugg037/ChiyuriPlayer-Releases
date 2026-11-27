@@ -1,4 +1,5 @@
-from pathlib import Path\nimport re
+from pathlib import Path
+import re
 
 def replace_once(path: Path, old: str, new: str, label: str):
     source = path.read_text(encoding="utf-8")
