@@ -298,7 +298,7 @@ class SmbRoutingDataSourceFactory(private val context: Context) : DataSource.Fac
     override fun createDataSource(): DataSource = RoutingDataSource(context)
 
     @OptIn(androidx.media3.common.util.UnstableApi::class)
-    private class RoutingDataSource(context: Context) : DataSource {
+    private class RoutingDataSource(private val context: Context) : DataSource {
         private val defaultFactory = DefaultDataSource.Factory(context)
         private val listeners = mutableListOf<TransferListener>()
         private var active: DataSource? = null
