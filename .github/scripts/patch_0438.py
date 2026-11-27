@@ -63,7 +63,7 @@ internal fun normalizeRadioStationUrl(raw: String): String? = runCatching {
 }.getOrNull()
 
 internal fun normalizeRadioStationName(raw: String, normalizedUrl: String): String? {
-    val name = raw.trim().replace(Regex("\\s+"), " ").take(80)
+    val name = raw.trim().replace(Regex("\\\\s+"), " ").take(80)
     if (name.isNotBlank()) return name
     return runCatching { URI(normalizedUrl).host?.take(80) }.getOrNull()?.takeIf { it.isNotBlank() }
 }
