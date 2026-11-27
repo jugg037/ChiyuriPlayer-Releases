@@ -1,28 +1,347 @@
 from pathlib import Path
-import sys
 ROOT = Path('app/src/main')
 PKG = ROOT / 'java/com/chiyuri/player'
 TEST = Path('app/src/test/java/com/chiyuri/player')
 PKG.mkdir(parents=True, exist_ok=True)
 TEST.mkdir(parents=True, exist_ok=True)
-def write(name, source):
-    path = PKG / name
-    if path.exists(): raise SystemExit(f'patch_0445: {name} already exists')
+def write(path, source):
+    if path.exists(): raise SystemExit(f'patch_0445: {path.name} already exists')
     path.write_text(source, encoding='utf-8')
-def write_test(name, source):
-    path = TEST / name
-    if path.exists(): raise SystemExit(f'patch_0445: {name} already exists')
-    path.write_text(source, encoding='utf-8')
-manager = "package com.chiyuri.player\n\nimport android.content.Context\nimport android.net.Uri\nimport androidx.core.content.edit\nimport org.json.JSONArray\nimport org.json.JSONObject\nimport java.io.BufferedInputStream\nimport java.io.BufferedOutputStream\nimport java.io.InputStream\nimport java.io.OutputStream\nimport java.util.zip.ZipEntry\nimport java.util.zip.ZipInputStream\nimport java.util.zip.ZipOutputStream\n\ndata class BackupRestoreSummary(\n    val playlistsRestored: Int,\n    val tracksRestored: Int,\n    val favoritesRestored: Int,\n    val presetsRestored: Int,\n    val radioStationsRestored: Int\n)\n\nobject LibraryBackupManager {\n    private const val ENTRY_NAME = \"chiyuri-backup.json\"\n    private const val SCHEMA_VERSION = 1\n    private const val MAX_BACKUP_BYTES = 8 * 1024 * 1024\n    private const val MAX_PLAYLISTS = 100\n    private const val MAX_TRACKS_PER_PLAYLIST = 2000\n    private const val MAX_FAVORITES = 10000\n\n    fun export(context: Context, output: OutputStream) {\n        val payload = buildPayload(context).toString().toByteArray(Charsets.UTF_8)\n        require(payload.size <= MAX_BACKUP_BYTES) { \"Резервная копия превышает допустимый размер\" }\n        ZipOutputStream(BufferedOutputStream(output)).use { zip ->\n            zip.putNextEntry(ZipEntry(ENTRY_NAME))\n            zip.write(payload)\n            zip.closeEntry()\n        }\n    }\n\n    fun restore(context: Context, input: InputStream): BackupRestoreSummary {\n        var payload: ByteArray? = null\n        var total = 0\n        ZipInputStream(BufferedInputStream(input)).use { zip ->\n            while (true) {\n                val entry = zip.nextEntry ?: break\n                if (entry.isDirectory || entry.name != ENTRY_NAME || payload != null) {\n                    throw IllegalArgumentException(\"Архив содержит неподдерживаемые записи\")\n                }\n                val bytes = zip.readBytesLimited(MAX_BACKUP_BYTES)\n                total += bytes.size\n                require(total <= MAX_BACKUP_BYTES) { \"Архив слишком большой\" }\n                payload = bytes\n                zip.closeEntry()\n            }\n        }\n        val json = JSONObject(String(payload ?: throw IllegalArgumentException(\"В архиве нет файла резервной копии\"), Charsets.UTF_8))\n        require(json.optInt(\"schema_version\", -1) == SCHEMA_VERSION) { \"Неподдерживаемая версия резервной копии\" }\n\n        val configObject = json.optJSONObject(\"audio_effects\")\n        if (configObject != null) {\n            val bands = configObject.optJSONArray(\"bands\") ?: JSONArray()\n            AudioEffectsSettings.save(context, normalizeAudioEffectsConfig(AudioEffectsConfig(\n                equalizerEnabled = configObject.optBoolean(\"equalizer_enabled\", false),\n                bandsDb = (0 until bands.length()).map { bands.optDouble(it, 0.0).toFloat() },\n                playerVolume = configObject.optDouble(\"player_volume\", 1.0).toFloat()\n            )))\n        }\n\n        val favoriteArray = json.optJSONArray(\"favorites\") ?: JSONArray()\n        val favorites = buildSet {\n            for (index in 0 until minOf(favoriteArray.length(), MAX_FAVORITES)) {\n                val raw = favoriteArray.optString(index)\n                if (isAllowedBackupUri(raw)) add(raw)\n            }\n        }\n        context.getSharedPreferences(\"favorite_tracks\", Context.MODE_PRIVATE).edit {\n            putStringSet(\"uris\", favorites)\n        }\n\n        var presetsRestored = 0\n        val presetArray = json.optJSONArray(\"equalizer_presets\") ?: JSONArray()\n        for (index in 0 until minOf(presetArray.length(), 30)) {\n            val item = presetArray.optJSONObject(index) ?: continue\n            val bands = item.optJSONArray(\"bands\") ?: continue\n            val values = (0 until bands.length()).map { bands.optDouble(it, 0.0).toFloat() }\n            val name = item.optString(\"name\")\n            if (name.isNotBlank() && values.size in 5..10) {\n                runCatching { CustomEqualizerPresetStore.save(context, name, resampleEqualizerBands(values, 10)) }\n                    .onSuccess { presetsRestored++ }\n            }\n        }\n\n        var stationsRestored = 0\n        val stationArray = json.optJSONArray(\"radio_stations\") ?: JSONArray()\n        for (index in 0 until minOf(stationArray.length(), 50)) {\n            val item = stationArray.optJSONObject(index) ?: continue\n            val before = RadioStationStore.load(context).size\n            RadioStationStore.add(context, item.optString(\"name\"), item.optString(\"url\"))\n            if (RadioStationStore.load(context).size > before) stationsRestored++\n        }\n\n        var playlistsRestored = 0\n        var tracksRestored = 0\n        val repository = PlaylistRepository(context)\n        try {\n        val playlistArray = json.optJSONArray(\"playlists\") ?: JSONArray()\n        for (index in 0 until minOf(playlistArray.length(), MAX_PLAYLISTS)) {\n            val item = playlistArray.optJSONObject(index) ?: continue\n            val originalName = normalizePlaylistName(item.optString(\"name\")) ?: continue\n            val playlistId = createUniquePlaylist(repository, originalName) ?: continue\n            playlistsRestored++\n            val tracks = item.optJSONArray(\"tracks\") ?: JSONArray()\n            for (trackIndex in 0 until minOf(tracks.length(), MAX_TRACKS_PER_PLAYLIST)) {\n                val track = tracks.optJSONObject(trackIndex) ?: continue\n                val rawUri = track.optString(\"uri\")\n                if (!isAllowedBackupUri(rawUri)) continue\n                if (repository.addTrack(\n                    playlistId,\n                    Uri.parse(rawUri),\n                    track.optString(\"title\").take(200),\n                    track.optString(\"artist\").take(200).ifBlank { null },\n                    track.optLong(\"duration_ms\", 0L).coerceIn(0L, 86_400_000L),\n                    track.optString(\"mime_type\").take(120).ifBlank { null }\n                )) tracksRestored++\n            }\n        }\n        } finally { repository.close() }\n        return BackupRestoreSummary(playlistsRestored, tracksRestored, favorites.size, presetsRestored, stationsRestored)\n    }\n\n    internal fun isAllowedBackupUri(raw: String): Boolean {\n        if (raw.isBlank() || raw.length > 4096 || raw.any { it.isWhitespace() }) return false\n        return runCatching {\n            val uri = Uri.parse(raw)\n            when (uri.scheme?.lowercase()) {\n                \"content\", \"file\", \"smb\" -> uri.userInfo == null\n                \"https\" -> !uri.host.isNullOrBlank() && uri.userInfo == null\n                else -> false\n            }\n        }.getOrDefault(false)\n    }\n\n    private fun buildPayload(context: Context): JSONObject {\n        val config = AudioEffectsSettings.load(context)\n        val configJson = JSONObject()\n            .put(\"equalizer_enabled\", config.equalizerEnabled)\n            .put(\"player_volume\", config.playerVolume)\n            .put(\"bands\", JSONArray(config.bandsDb))\n        val favorites = JSONArray(FavoriteTracksStore.load(context).filter(::isAllowedBackupUri).take(MAX_FAVORITES))\n        val presets = JSONArray()\n        CustomEqualizerPresetStore.load(context).take(30).forEach { preset ->\n            presets.put(JSONObject().put(\"name\", preset.name).put(\"bands\", JSONArray(preset.bandsDb)))\n        }\n        val stations = JSONArray()\n        RadioStationStore.load(context).take(50).forEach { station ->\n            stations.put(JSONObject().put(\"name\", station.name).put(\"url\", station.url))\n        }\n        val playlists = JSONArray()\n        PlaylistRepository(context).use { repository ->\n            repository.getPlaylists().take(MAX_PLAYLISTS).forEach { playlist ->\n                val tracks = JSONArray()\n                repository.getTracks(playlist.id).take(MAX_TRACKS_PER_PLAYLIST).forEach { track ->\n                    if (isAllowedBackupUri(track.uri)) {\n                        tracks.put(JSONObject()\n                            .put(\"uri\", track.uri)\n                            .put(\"title\", track.title)\n                            .put(\"artist\", track.artist)\n                            .put(\"duration_ms\", track.durationMs)\n                            .put(\"mime_type\", track.mimeType))\n                    }\n                }\n                playlists.put(JSONObject().put(\"name\", playlist.name).put(\"tracks\", tracks))\n            }\n        }\n        return JSONObject()\n            .put(\"schema_version\", SCHEMA_VERSION)\n            .put(\"created_at\", System.currentTimeMillis())\n            .put(\"audio_effects\", configJson)\n            .put(\"favorites\", favorites)\n            .put(\"equalizer_presets\", presets)\n            .put(\"radio_stations\", stations)\n            .put(\"playlists\", playlists)\n    }\n\n    private fun createUniquePlaylist(repository: PlaylistRepository, baseName: String): Long? {\n        if (repository.createPlaylist(baseName) != null) return repository.getPlaylists().firstOrNull { it.name.equals(baseName, true) }?.id\n        for (index in 2..99) {\n            val suffix = \" ($index)\"\n            val candidate = baseName.take(80 - suffix.length) + suffix\n            val id = repository.createPlaylist(candidate)\n            if (id != null) return id\n        }\n        return null\n    }\n\n    private fun InputStream.readBytesLimited(limit: Int): ByteArray {\n        val output = java.io.ByteArrayOutputStream()\n        val buffer = ByteArray(8192)\n        var total = 0\n        while (true) {\n            val count = read(buffer)\n            if (count < 0) break\n            total += count\n            require(total <= limit) { \"Архив слишком большой\" }\n            output.write(buffer, 0, count)\n        }\n        return output.toByteArray()\n    }\n}\n"
-write('LibraryBackupManager.kt', manager)
-card = "package com.chiyuri.player\n\nimport androidx.activity.compose.rememberLauncherForActivityResult\nimport androidx.activity.result.contract.ActivityResultContracts\nimport androidx.compose.foundation.layout.Arrangement\nimport androidx.compose.foundation.layout.Column\nimport androidx.compose.foundation.layout.Row\nimport androidx.compose.foundation.layout.fillMaxWidth\nimport androidx.compose.foundation.layout.padding\nimport androidx.compose.foundation.shape.RoundedCornerShape\nimport androidx.compose.material3.Button\nimport androidx.compose.material3.MaterialTheme\nimport androidx.compose.material3.Surface\nimport androidx.compose.material3.Text\nimport androidx.compose.runtime.Composable\nimport androidx.compose.runtime.getValue\nimport androidx.compose.runtime.mutableStateOf\nimport androidx.compose.runtime.remember\nimport androidx.compose.runtime.rememberCoroutineScope\nimport androidx.compose.runtime.setValue\nimport androidx.compose.ui.Modifier\nimport androidx.compose.ui.platform.LocalContext\nimport androidx.compose.ui.unit.dp\nimport kotlinx.coroutines.Dispatchers\nimport kotlinx.coroutines.launch\nimport kotlinx.coroutines.withContext\n\n@Composable\ninternal fun LibraryBackupCard() {\n    val context = LocalContext.current\n    val scope = rememberCoroutineScope()\n    var status by remember { mutableStateOf<String?>(null) }\n    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(\"application/zip\")) { uri ->\n        if (uri != null) scope.launch {\n            val result = runCatching {\n                withContext(Dispatchers.IO) {\n                    val output = context.contentResolver.openOutputStream(uri)\n                        ?: error(\"Не удалось открыть файл для записи\")\n                    LibraryBackupManager.export(context, output)\n                }\n            }\n            status = result.fold(\n                onSuccess = { \"Резервная копия создана.\" },\n                onFailure = { \"Ошибка экспорта: ${it.localizedMessage ?: \"неизвестная ошибка\"}\" }\n            )\n        }\n    }\n    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->\n        if (uri != null) scope.launch {\n            val result = runCatching {\n                withContext(Dispatchers.IO) {\n                    val input = context.contentResolver.openInputStream(uri)\n                        ?: error(\"Не удалось открыть архив\")\n                    LibraryBackupManager.restore(context, input)\n                }\n            }\n            status = result.fold(\n                onSuccess = { \"Восстановлено: ${it.playlistsRestored} плейлистов, ${it.tracksRestored} треков, ${it.favoritesRestored} избранных.\" },\n                onFailure = { \"Ошибка восстановления: ${it.localizedMessage ?: \"неизвестная ошибка\"}\" }\n            )\n        }\n    }\n    Surface(\n        color = MaterialTheme.colorScheme.surface,\n        shape = RoundedCornerShape(16.dp),\n        modifier = Modifier.fillMaxWidth()\n    ) {\n        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {\n            Text(\"Резервная копия\", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)\n            Text(\n                \"Сохраняются плейлисты, избранное, пресеты эквалайзера, настройки звука и избранные радиостанции. Пароли сетевых серверов не экспортируются.\",\n                style = MaterialTheme.typography.bodySmall,\n                color = MaterialTheme.colorScheme.onSurfaceVariant\n            )\n            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {\n                Button(onClick = { exportLauncher.launch(\"ChiyuriPlayer-backup.zip\") }, modifier = Modifier.weight(1f)) {\n                    Text(\"Экспорт\")\n                }\n                Button(onClick = { importLauncher.launch(arrayOf(\"application/zip\", \"application/octet-stream\")) }, modifier = Modifier.weight(1f)) {\n                    Text(\"Импорт\")\n                }\n            }\n            Text(\n                \"После переноса на другое устройство доступ к исходным локальным файлам может потребовать повторного выбора.\",\n                style = MaterialTheme.typography.bodySmall,\n                color = MaterialTheme.colorScheme.onSurfaceVariant\n            )\n            status?.let { Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall) }\n        }\n    }\n}\n"
-write('LibraryBackupCard.kt', card)
-test = "package com.chiyuri.player\n\nimport org.junit.Assert.assertFalse\nimport org.junit.Assert.assertTrue\nimport org.junit.Test\n\nclass LibraryBackupManagerTest {\n    @Test fun acceptsOnlySupportedSafeUriSchemes() {\n        assertTrue(LibraryBackupManager.isAllowedBackupUri(\"content://media/external/audio/1\"))\n        assertTrue(LibraryBackupManager.isAllowedBackupUri(\"file:///storage/emulated/0/Music/a.mp3\"))\n        assertTrue(LibraryBackupManager.isAllowedBackupUri(\"smb://nas/Music/a.mp3\"))\n        assertTrue(LibraryBackupManager.isAllowedBackupUri(\"https://example.com/a.mp3\"))\n        assertFalse(LibraryBackupManager.isAllowedBackupUri(\"http://example.com/a.mp3\"))\n        assertFalse(LibraryBackupManager.isAllowedBackupUri(\"https://user:pass@example.com/a.mp3\"))\n        assertFalse(LibraryBackupManager.isAllowedBackupUri(\"javascript:alert(1)\"))\n        assertFalse(LibraryBackupManager.isAllowedBackupUri(\"\"))\n    }\n\n    @Test fun rejectsWhitespaceAndOversizedUris() {\n        assertFalse(LibraryBackupManager.isAllowedBackupUri(\"content://media/audio/1 bad\"))\n        assertFalse(LibraryBackupManager.isAllowedBackupUri(\"content://\" + \"a\".repeat(5000)))\n    }\n}\n"
-write_test('LibraryBackupManagerTest.kt', test)
+manager = r'''package com.chiyuri.player
+
+import android.content.Context
+import android.net.Uri
+import androidx.core.content.edit
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
+import java.io.InputStream
+import java.io.OutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+
+data class BackupRestoreSummary(
+    val playlistsRestored: Int,
+    val tracksRestored: Int,
+    val favoritesRestored: Int,
+    val presetsRestored: Int,
+    val radioStationsRestored: Int
+)
+
+object LibraryBackupManager {
+    private const val ENTRY_NAME = "chiyuri-backup.json"
+    private const val SCHEMA_VERSION = 1
+    private const val MAX_BACKUP_BYTES = 8 * 1024 * 1024
+    private const val MAX_PLAYLISTS = 100
+    private const val MAX_TRACKS_PER_PLAYLIST = 2000
+    private const val MAX_FAVORITES = 10000
+
+    fun export(context: Context, output: OutputStream) {
+        val payload = buildPayload(context).toString().toByteArray(Charsets.UTF_8)
+        require(payload.size <= MAX_BACKUP_BYTES) { "Резервная копия превышает допустимый размер" }
+        ZipOutputStream(BufferedOutputStream(output)).use { zip ->
+            zip.putNextEntry(ZipEntry(ENTRY_NAME))
+            zip.write(payload)
+            zip.closeEntry()
+        }
+    }
+
+    fun restore(context: Context, input: InputStream): BackupRestoreSummary {
+        var payload: ByteArray? = null
+        var total = 0
+        ZipInputStream(BufferedInputStream(input)).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                if (entry.isDirectory || entry.name != ENTRY_NAME || payload != null) {
+                    throw IllegalArgumentException("Архив содержит неподдерживаемые записи")
+                }
+                val bytes = zip.readBytesLimited(MAX_BACKUP_BYTES)
+                total += bytes.size
+                require(total <= MAX_BACKUP_BYTES) { "Архив слишком большой" }
+                payload = bytes
+                zip.closeEntry()
+            }
+        }
+        val json = JSONObject(String(payload ?: throw IllegalArgumentException("В архиве нет файла резервной копии"), Charsets.UTF_8))
+        require(json.optInt("schema_version", -1) == SCHEMA_VERSION) { "Неподдерживаемая версия резервной копии" }
+
+        val configObject = json.optJSONObject("audio_effects")
+        if (configObject != null) {
+            val bands = configObject.optJSONArray("bands") ?: JSONArray()
+            AudioEffectsSettings.save(context, normalizeAudioEffectsConfig(AudioEffectsConfig(
+                equalizerEnabled = configObject.optBoolean("equalizer_enabled", false),
+                bandsDb = (0 until bands.length()).map { bands.optDouble(it, 0.0).toFloat() },
+                playerVolume = configObject.optDouble("player_volume", 1.0).toFloat()
+            )))
+        }
+
+        val favoriteArray = json.optJSONArray("favorites") ?: JSONArray()
+        val favorites = buildSet {
+            for (index in 0 until minOf(favoriteArray.length(), MAX_FAVORITES)) {
+                val raw = favoriteArray.optString(index)
+                if (isAllowedBackupUri(raw)) add(raw)
+            }
+        }
+        context.getSharedPreferences("favorite_tracks", Context.MODE_PRIVATE).edit {
+            putStringSet("uris", favorites)
+        }
+
+        var presetsRestored = 0
+        val presetArray = json.optJSONArray("equalizer_presets") ?: JSONArray()
+        for (index in 0 until minOf(presetArray.length(), 30)) {
+            val item = presetArray.optJSONObject(index) ?: continue
+            val bands = item.optJSONArray("bands") ?: continue
+            val values = (0 until bands.length()).map { bands.optDouble(it, 0.0).toFloat() }
+            val name = item.optString("name")
+            if (name.isNotBlank() && values.size in 5..10) {
+                runCatching { CustomEqualizerPresetStore.save(context, name, resampleEqualizerBands(values, 10)) }
+                    .onSuccess { presetsRestored++ }
+            }
+        }
+
+        var stationsRestored = 0
+        val stationArray = json.optJSONArray("radio_stations") ?: JSONArray()
+        for (index in 0 until minOf(stationArray.length(), 50)) {
+            val item = stationArray.optJSONObject(index) ?: continue
+            val before = RadioStationStore.load(context).size
+            RadioStationStore.add(context, item.optString("name"), item.optString("url"))
+            if (RadioStationStore.load(context).size > before) stationsRestored++
+        }
+
+        var playlistsRestored = 0
+        var tracksRestored = 0
+        val repository = PlaylistRepository(context)
+        try {
+        val playlistArray = json.optJSONArray("playlists") ?: JSONArray()
+        for (index in 0 until minOf(playlistArray.length(), MAX_PLAYLISTS)) {
+            val item = playlistArray.optJSONObject(index) ?: continue
+            val originalName = normalizePlaylistName(item.optString("name")) ?: continue
+            val playlistId = createUniquePlaylist(repository, originalName) ?: continue
+            playlistsRestored++
+            val tracks = item.optJSONArray("tracks") ?: JSONArray()
+            for (trackIndex in 0 until minOf(tracks.length(), MAX_TRACKS_PER_PLAYLIST)) {
+                val track = tracks.optJSONObject(trackIndex) ?: continue
+                val rawUri = track.optString("uri")
+                if (!isAllowedBackupUri(rawUri)) continue
+                if (repository.addTrack(
+                    playlistId,
+                    Uri.parse(rawUri),
+                    track.optString("title").take(200),
+                    track.optString("artist").take(200).ifBlank { null },
+                    track.optLong("duration_ms", 0L).coerceIn(0L, 86_400_000L),
+                    track.optString("mime_type").take(120).ifBlank { null }
+                )) tracksRestored++
+            }
+        }
+        } finally { repository.close() }
+        return BackupRestoreSummary(playlistsRestored, tracksRestored, favorites.size, presetsRestored, stationsRestored)
+    }
+
+    internal fun isAllowedBackupUri(raw: String): Boolean {
+        if (raw.isBlank() || raw.length > 4096 || raw.any { it.isWhitespace() }) return false
+        return runCatching {
+            val uri = java.net.URI(raw)
+            when (uri.scheme?.lowercase()) {
+                "content", "file", "smb" -> uri.userInfo == null
+                "https" -> !uri.host.isNullOrBlank() && uri.userInfo == null
+                else -> false
+            }
+        }.getOrDefault(false)
+    }
+
+    private fun buildPayload(context: Context): JSONObject {
+        val config = AudioEffectsSettings.load(context)
+        val configJson = JSONObject()
+            .put("equalizer_enabled", config.equalizerEnabled)
+            .put("player_volume", config.playerVolume)
+            .put("bands", JSONArray(config.bandsDb))
+        val favorites = JSONArray(FavoriteTracksStore.load(context).filter(::isAllowedBackupUri).take(MAX_FAVORITES))
+        val presets = JSONArray()
+        CustomEqualizerPresetStore.load(context).take(30).forEach { preset ->
+            presets.put(JSONObject().put("name", preset.name).put("bands", JSONArray(preset.bandsDb)))
+        }
+        val stations = JSONArray()
+        RadioStationStore.load(context).take(50).forEach { station ->
+            stations.put(JSONObject().put("name", station.name).put("url", station.url))
+        }
+        val playlists = JSONArray()
+        PlaylistRepository(context).use { repository ->
+            repository.getPlaylists().take(MAX_PLAYLISTS).forEach { playlist ->
+                val tracks = JSONArray()
+                repository.getTracks(playlist.id).take(MAX_TRACKS_PER_PLAYLIST).forEach { track ->
+                    if (isAllowedBackupUri(track.uri)) {
+                        tracks.put(JSONObject()
+                            .put("uri", track.uri)
+                            .put("title", track.title)
+                            .put("artist", track.artist)
+                            .put("duration_ms", track.durationMs)
+                            .put("mime_type", track.mimeType))
+                    }
+                }
+                playlists.put(JSONObject().put("name", playlist.name).put("tracks", tracks))
+            }
+        }
+        return JSONObject()
+            .put("schema_version", SCHEMA_VERSION)
+            .put("created_at", System.currentTimeMillis())
+            .put("audio_effects", configJson)
+            .put("favorites", favorites)
+            .put("equalizer_presets", presets)
+            .put("radio_stations", stations)
+            .put("playlists", playlists)
+    }
+
+    private fun createUniquePlaylist(repository: PlaylistRepository, baseName: String): Long? {
+        if (repository.createPlaylist(baseName) != null) return repository.getPlaylists().firstOrNull { it.name.equals(baseName, true) }?.id
+        for (index in 2..99) {
+            val suffix = " ($index)"
+            val candidate = baseName.take(80 - suffix.length) + suffix
+            val id = repository.createPlaylist(candidate)
+            if (id != null) return id
+        }
+        return null
+    }
+
+    private fun InputStream.readBytesLimited(limit: Int): ByteArray {
+        val output = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(8192)
+        var total = 0
+        while (true) {
+            val count = read(buffer)
+            if (count < 0) break
+            total += count
+            require(total <= limit) { "Архив слишком большой" }
+            output.write(buffer, 0, count)
+        }
+        return output.toByteArray()
+    }
+}
+'''
+card = r'''package com.chiyuri.player
+
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+@Composable
+internal fun LibraryBackupCard() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var status by remember { mutableStateOf<String?>(null) }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) scope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    val output = context.contentResolver.openOutputStream(uri)
+                        ?: error("Не удалось открыть файл для записи")
+                    LibraryBackupManager.export(context, output)
+                }
+            }
+            status = result.fold(
+                onSuccess = { "Резервная копия создана." },
+                onFailure = { "Ошибка экспорта: ${it.localizedMessage ?: "неизвестная ошибка"}" }
+            )
+        }
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    val input = context.contentResolver.openInputStream(uri)
+                        ?: error("Не удалось открыть архив")
+                    LibraryBackupManager.restore(context, input)
+                }
+            }
+            status = result.fold(
+                onSuccess = { "Восстановлено: ${it.playlistsRestored} плейлистов, ${it.tracksRestored} треков, ${it.favoritesRestored} избранных." },
+                onFailure = { "Ошибка восстановления: ${it.localizedMessage ?: "неизвестная ошибка"}" }
+            )
+        }
+    }
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Резервная копия", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                "Сохраняются плейлисты, избранное, пресеты эквалайзера, настройки звука и избранные радиостанции. Пароли сетевых серверов не экспортируются.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = { exportLauncher.launch("ChiyuriPlayer-backup.zip") }, modifier = Modifier.weight(1f)) {
+                    Text("Экспорт")
+                }
+                Button(onClick = { importLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }, modifier = Modifier.weight(1f)) {
+                    Text("Импорт")
+                }
+            }
+            Text(
+                "После переноса на другое устройство доступ к исходным локальным файлам может потребовать повторного выбора.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            status?.let { Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall) }
+        }
+    }
+}
+'''
+test = r'''package com.chiyuri.player
+
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class LibraryBackupManagerTest {
+    @Test fun acceptsOnlySupportedSafeUriSchemes() {
+        assertTrue(LibraryBackupManager.isAllowedBackupUri("content://media/external/audio/1"))
+        assertTrue(LibraryBackupManager.isAllowedBackupUri("file:///storage/emulated/0/Music/a.mp3"))
+        assertTrue(LibraryBackupManager.isAllowedBackupUri("smb://nas/Music/a.mp3"))
+        assertTrue(LibraryBackupManager.isAllowedBackupUri("https://example.com/a.mp3"))
+        assertFalse(LibraryBackupManager.isAllowedBackupUri("http://example.com/a.mp3"))
+        assertFalse(LibraryBackupManager.isAllowedBackupUri("https://user:pass@example.com/a.mp3"))
+        assertFalse(LibraryBackupManager.isAllowedBackupUri("javascript:alert(1)"))
+        assertFalse(LibraryBackupManager.isAllowedBackupUri(""))
+    }
+
+    @Test fun rejectsWhitespaceAndOversizedUris() {
+        assertFalse(LibraryBackupManager.isAllowedBackupUri("content://media/audio/1 bad"))
+        assertFalse(LibraryBackupManager.isAllowedBackupUri("content://" + "a".repeat(5000)))
+    }
+}
+'''
+write(PKG / 'LibraryBackupManager.kt', manager)
+write(PKG / 'LibraryBackupCard.kt', card)
+write(TEST / 'LibraryBackupManagerTest.kt', test)
 main = Path('app/src/main/java/com/chiyuri/player/MainActivity.kt')
 source = main.read_text(encoding='utf-8')
 anchor = '        NetworkStreamCard(player)\n'
 if anchor not in source: raise SystemExit('patch_0445: network card insertion anchor missing')
 source = source.replace(anchor, anchor + '        LibraryBackupCard()\n', 1)
 main.write_text(source, encoding='utf-8')
-print('patch_0445: bounded backup/restore for playlists, favorites, EQ presets, audio settings and radio bookmarks applied')
+print('patch_0445: bounded, validated backup/restore for playlists, favorites, EQ presets, audio settings and radio bookmarks applied')
