@@ -2470,9 +2470,9 @@ jobs:
           grep -F 'FLAG_GRANT_READ_URI_PERMISSION or' "$MAIN"
           ! grep -R -E 'BassBoost|bassBoostStrength|KEY_BASS_STRENGTH|Усиление басов' app/src/main/java/com/chiyuri/player
           grep -F 'volumeBoostToMillibels(config.playerVolume)' "$AUDIO"
-          grep -F 'coerceIn(0, 954)' "$SETTINGS"
-          grep -F 'valueRange = 0f..2f' "$MAIN"
-          grep -F 'coerceAtMost(3f)' "$MAIN"
+          grep -F 'coerceIn(0, 602)' "$SETTINGS"
+          grep -F 'valueRange = 0f..1f' "$MAIN"
+          grep -F 'coerceAtMost(2f)' "$MAIN"
           grep -F 'boostPercent / 200f' "$VOLUME"
           grep -F 'mapsVolumeBoostToLoudnessEnhancerGain' "$TESTS"
           grep -F 'MediaStore.createWriteRequest(context.contentResolver, listOf(mediaUri))' "$EDITOR"
