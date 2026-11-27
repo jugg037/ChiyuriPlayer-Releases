@@ -37,6 +37,7 @@ on:
       - ".github/scripts/patch_0443.py"
       - ".github/scripts/patch_0444.py"
       - ".github/scripts/patch_0445.py"
+      - ".github/scripts/patch_0446.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
@@ -2268,7 +2269,7 @@ jobs:
       - name: Apply parallel audio, library, video, automation and network feature patches
         run: |
           set -euo pipefail
-          for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py; do
+          for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py .github/scripts/patch_0446.py; do
             echo "===== Applying $patch ====="
             python3 -u "$patch" | tee "patch_${patch##*_}.log"
           done
@@ -2300,12 +2301,18 @@ jobs:
           test -s "$PKG/LibraryBackupCard.kt"
           grep -F "LibraryBackupCard()" app/src/main/java/com/chiyuri/player/MainActivity.kt
           grep -F "isAllowedBackupUri" "$PKG/LibraryBackupManager.kt"
+          test -s "$PKG/ReplayGainReader.kt"
+          grep -F "REPLAYGAIN_TRACK_GAIN" "$PKG/ReplayGainReader.kt"
+          grep -F "setReplayGainDb" "$PKG/AudioEffectsController.kt"
+          grep -F "replayGainEnabled" "$PKG/AudioEffectsSettings.kt"
+          grep -F "ReplayGainReader.read" "$PKG/PlaybackService.kt"
+          grep -F "ReplayGain" "$PKG/MainActivity.kt"
           grep -F "versionName = \"0.5.8\"" app/build.gradle.kts
           grep -F "orElse(\"344\")" app/build.gradle.kts
-          for test in EqualizerPresetsTest.kt AudioEffectsSettingsTest.kt PlaybackHistoryStoreTest.kt MediaLibrarySortingTest.kt RadioStationStoreTest.kt VideoGestureMathTest.kt PlaybackOutputReconnectTest.kt AudioOutputProfileKeyTest.kt MediaLibraryPaginationTest.kt SmbAddressTest.kt LibraryBackupManagerTest.kt; do
+          for test in EqualizerPresetsTest.kt AudioEffectsSettingsTest.kt PlaybackHistoryStoreTest.kt MediaLibrarySortingTest.kt RadioStationStoreTest.kt VideoGestureMathTest.kt PlaybackOutputReconnectTest.kt AudioOutputProfileKeyTest.kt MediaLibraryPaginationTest.kt SmbAddressTest.kt LibraryBackupManagerTest.kt ReplayGainReaderTest.kt; do
             test -s "$TEST/$test"
           done
-          echo "PASS: eleven feature patches, migration paths, network validation and regression test files are present."
+          echo "PASS: twelve feature patches, migration paths, network validation and regression test files are present."
 
       - name: Verify automatic device sensor orientation and fullscreen override
         run: |
@@ -2696,6 +2703,7 @@ jobs:
             - Добавлена Android Auto медиатека с избранным и историей.
             - Добавлены SMB 2/3: просмотр сетевых папок, потоковое чтение и шифрование сохранённых паролей через Android Keystore.
             - Добавлен экспорт и восстановление резервной копии плейлистов, избранного, настроек звука, пресетов эквалайзера и радиостанций; секреты сетевых подключений не попадают в архив.
+            - Добавлена автоматическая нормализация ReplayGain для MP3/FLAC по встроенным тегам; усиление и ReplayGain совместно ограничены уровнем 200%.
             - Аудио и видео автоматически следуют за ориентацией устройства по датчику.
             - В полноэкранном видео можно временно зафиксировать портретную ориентацию и вернуться к автоматическому режиму.
             Версия приложения: 0.5.8 - 344.
