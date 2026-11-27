@@ -73,7 +73,8 @@ object LibraryBackupManager {
             AudioEffectsSettings.save(context, normalizeAudioEffectsConfig(AudioEffectsConfig(
                 equalizerEnabled = configObject.optBoolean("equalizer_enabled", false),
                 bandsDb = (0 until bands.length()).map { bands.optDouble(it, 0.0).toFloat() },
-                playerVolume = configObject.optDouble("player_volume", 1.0).toFloat()
+                playerVolume = configObject.optDouble("player_volume", 1.0).toFloat(),
+                replayGainEnabled = configObject.optBoolean("replay_gain_enabled", true)
             )))
         }
 
@@ -156,6 +157,7 @@ object LibraryBackupManager {
         val configJson = JSONObject()
             .put("equalizer_enabled", config.equalizerEnabled)
             .put("player_volume", config.playerVolume)
+            .put("replay_gain_enabled", config.replayGainEnabled)
             .put("bands", JSONArray(config.bandsDb))
         val favorites = JSONArray(FavoriteTracksStore.load(context).filter(::isAllowedBackupUri).take(MAX_FAVORITES))
         val presets = JSONArray()
