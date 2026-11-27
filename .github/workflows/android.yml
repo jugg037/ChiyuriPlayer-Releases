@@ -2715,6 +2715,7 @@ jobs:
           }
 
       - name: Ensure source is still latest main before building
+        if: github.ref == 'refs/heads/main'
         run: |
           set -eu
           latest="$(git ls-remote origin refs/heads/main | cut -f1)"
