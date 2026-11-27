@@ -178,8 +178,8 @@ p = ROOT / "app/build.gradle.kts"
 s = p.read_text(encoding="utf-8")
 if 'versionName = "0.5.6"' not in s or 'orElse("342")' not in s:
     raise SystemExit("patch_0435: app version 0.5.6 (342) anchor missing")
-s = s.replace('versionName = "0.5.6"', 'versionName = "0.5.7"', 1)
-s = s.replace('orElse("342")', 'orElse("343")', 1)
+s = s.replace('versionName = "0.5.6"', 'versionName = "0.5.8"', 1)
+s = s.replace('orElse("342")', 'orElse("344")', 1)
 p.write_text(s, encoding="utf-8")
 
 p = TEST / "EqualizerPresetsTest.kt"
