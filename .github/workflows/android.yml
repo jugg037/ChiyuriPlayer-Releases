@@ -2362,6 +2362,13 @@ jobs:
           grep -F 'PROPFIND' "$PKG/WebDavNetworkClient.kt"
           grep -F 'WebDavLibraryScreen(player' "$PKG/MainActivity.kt"
           grep -F 'okhttp:5.5.1' app/build.gradle.kts
+          grep -F 'Virtualizer(' "$PKG/AudioEffectsController.kt"
+          grep -F 'spatial_enabled' "$PKG/AudioEffectsSettings.kt"
+          grep -F 'Пространственное звучание' "$PKG/MainActivity.kt"
+          grep -F 'transition_fade_ms' "$PKG/PlaybackPreferencesStore.kt"
+          grep -F 'calculateFadeOutGain' "$PKG/PlaybackService.kt"
+          grep -F 'Плавный переход' "$PKG/PartyModeScreen.kt"
+          test -s "$PKG/PlaybackPreferencesTest.kt"
                     test -s "$PKG/MediaFileInfo.kt"
           grep -F "MediaExtractor" "$PKG/MediaFileInfo.kt"
           grep -F "MediaFileInfoDialog(player" "$PKG/MainActivity.kt"
