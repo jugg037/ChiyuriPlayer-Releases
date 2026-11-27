@@ -6,8 +6,8 @@ workflow = Path(".github/workflows/android.yml").read_text(encoding="utf-8")
 
 checks = {
     "lifecycle-runtime-ktx 2.11.1": 'lifecycle-runtime-ktx:2.11.1' in gradle,
-    "Gradle wrapper 9.9.2": "gradle-9.9.2-bin.zip" in wrapper,
-    "CI Gradle 9.9.2": 'gradle-version: "9.9.2"' in workflow,
+    "Gradle wrapper 9.9.3": "gradle-9.9.3-bin.zip" in wrapper,
+    "CI Gradle 9.9.3": 'gradle-version: "9.9.3"' in workflow,
     "Android 17 audit lifecycle 2.11.1": "lifecycle-runtime-ktx:2.11.1" in workflow,
 }
 failed = [name for name, passed in checks.items() if not passed]
