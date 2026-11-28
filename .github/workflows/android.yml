@@ -60,6 +60,7 @@ on:
       - ".github/scripts/patch_0466.py"
       - ".github/scripts/patch_0467.py"
       - ".github/scripts/patch_0468.py"
+      - ".github/scripts/patch_0469.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
@@ -2291,7 +2292,7 @@ jobs:
       - name: Apply parallel audio, library, video, automation and network feature patches
         run: |
           set -euo pipefail
-          for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py .github/scripts/patch_0446.py .github/scripts/patch_0447.py .github/scripts/patch_0448.py .github/scripts/patch_0449.py .github/scripts/patch_0450.py .github/scripts/patch_0451.py .github/scripts/patch_0452.py .github/scripts/patch_0453.py .github/scripts/patch_0454.py .github/scripts/patch_0455.py .github/scripts/patch_0456.py .github/scripts/patch_0457.py .github/scripts/patch_0458.py .github/scripts/patch_0459.py .github/scripts/patch_0460.py .github/scripts/patch_0461.py .github/scripts/patch_0462.py .github/scripts/patch_0463.py .github/scripts/patch_0464.py .github/scripts/patch_0465.py .github/scripts/patch_0466.py .github/scripts/patch_0467.py .github/scripts/patch_0468.py; do
+          for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py .github/scripts/patch_0446.py .github/scripts/patch_0447.py .github/scripts/patch_0448.py .github/scripts/patch_0449.py .github/scripts/patch_0450.py .github/scripts/patch_0451.py .github/scripts/patch_0452.py .github/scripts/patch_0453.py .github/scripts/patch_0454.py .github/scripts/patch_0455.py .github/scripts/patch_0456.py .github/scripts/patch_0457.py .github/scripts/patch_0458.py .github/scripts/patch_0459.py .github/scripts/patch_0460.py .github/scripts/patch_0461.py .github/scripts/patch_0462.py .github/scripts/patch_0463.py .github/scripts/patch_0464.py .github/scripts/patch_0465.py .github/scripts/patch_0466.py .github/scripts/patch_0467.py .github/scripts/patch_0468.py .github/scripts/patch_0469.py; do
             echo "===== Applying $patch ====="
             python3 -u "$patch" | tee "patch_${patch##*_}.log"
           done
@@ -2433,6 +2434,8 @@ jobs:
           ! grep -F 'expandedMiniPlayer' "$MAIN"
           grep -F 'if (tab == "Сеть")' "$MAIN"
           grep -F 'listOf("Музыка", "Видео", "Сеть", "Плейлисты", "Ещё")' "$MAIN"
+          ! grep -R -F "createTempDir(" app/src/test
+          grep -F '@Suppress("DEPRECATION")' app/src/main/java/com/chiyuri/player/AudioEffectsController.kt
           test -s app/src/main/java/com/chiyuri/player/PlaybackSessionQueues.kt
           grep -F 'tint = Color.White' app/src/main/java/com/chiyuri/player/GothicUi.kt
           ! grep -F 'screenOrientation=' app/src/main/AndroidManifest.xml
