@@ -4,10 +4,9 @@ for filename in ("Mp3Id3TagWriterTest.kt","FlacAndMp4MetadataWriterTest.kt"):
  f=tests/filename; s=f.read_text(encoding="utf-8")
  if "createTempDir(" not in s: raise SystemExit(f"patch_0469: expected deprecated temp directory use in {filename}")
  s=s.replace("createTempDir(prefix = ", "Files.createTempDirectory(", )
- s=s.replace('''").toFile()''','''").toFile()''')
- # The replacement above leaves the original closing parenthesis, so convert the call's closing token.
- import re
- s=re.sub(r'Files\\.createTempDirectory\\(("chiyuri-[^"]+")\\)',r'Files.createTempDirectory(\\1).toFile()',s)
+ for prefix in ("id3", "flac", "mp4"):
+  token=f'Files.createTempDirectory("chiyuri-{prefix}-")'
+  s=s.replace(token, token + ".toFile()")
  if "import java.nio.file.Files" not in s:
   marker="import java.io.File\n"
   if marker not in s: raise SystemExit(f"patch_0469: java.io.File import missing in {filename}")
