@@ -19,6 +19,6 @@ if s.count(prop)!=1: raise SystemExit("patch_0469: virtualizer property anchor m
 s=s.replace(prop,'    @Suppress("DEPRECATION")\n'+prop,1)
 anchor="    private fun attachToSession(audioSessionId: Int) {"
 if s.count(anchor)!=1: raise SystemExit("patch_0469: virtualizer compatibility method anchor mismatch")
-s=s.replace(anchor,"    @Suppress(\\"DEPRECATION\\") // Legacy session effect remains the supported best-effort virtualizer control.\\n"+anchor,1)
+s=s.replace(anchor,'    @Suppress("DEPRECATION") // Legacy session effect remains the supported best-effort virtualizer control.\n'+anchor,1)
 f.write_text(s,encoding="utf-8")
 print("patch_0469: replaced deprecated createTempDir() test fixtures and isolated the legacy Android Virtualizer deprecation")
