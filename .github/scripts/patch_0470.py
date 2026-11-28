@@ -22,6 +22,11 @@ for line in [
  "import androidx.compose.material.icons.automirrored.filled.PlaylistAdd"
 ]: add_import("MainActivity.kt",line)
 for file in ("SmbLibraryScreen.kt","WebDavLibraryScreen.kt"):
+ target=p/file; source=target.read_text(encoding="utf-8")
+ if "Icons.Default.PlaylistAdd" not in source: raise SystemExit(f"patch_0470: deprecated PlaylistAdd missing in {file}")
+ source=source.replace("Icons.Default.PlaylistAdd","Icons.AutoMirrored.Filled.PlaylistAdd")
+ source=source.replace("import androidx.compose.material.icons.filled.PlaylistAdd\n","")
+ target.write_text(source,encoding="utf-8")
  add_import(file,"import androidx.compose.material.icons.automirrored.filled.PlaylistAdd")
 f=p/"AudioEffectsController.kt"; s=f.read_text(encoding="utf-8")
 anchor="    private fun applySettings() {"
