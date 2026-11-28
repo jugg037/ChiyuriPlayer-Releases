@@ -2727,6 +2727,40 @@ jobs:
             exit 1
           }
 
+      - name: Repeat full source and release audit after fixes
+        run: |
+          set -eu
+          python - <<'PY'
+          from pathlib import Path
+          scripts = sorted(Path(".github/scripts").glob("patch_*.py"))
+          for path in scripts:
+              compile(path.read_text(encoding="utf-8"), str(path), "exec")
+          print(f"Python patch syntax: {len(scripts)} scripts passed")
+          main = Path("app/src/main/java/com/chiyuri/player/MainActivity.kt").read_text(encoding="utf-8")
+          queues = Path("app/src/main/java/com/chiyuri/player/PlaybackSessionQueues.kt").read_text(encoding="utf-8")
+          gradle = Path("app/build.gradle.kts").read_text(encoding="utf-8")
+          gothic = Path("app/src/main/java/com/chiyuri/player/GothicUi.kt").read_text(encoding="utf-8")
+          assert 'versionName = "0.6.0"' in gradle
+          assert 'orElse("444")' in gradle
+          for name in ("expandedAudioMiniPlayer", "expandedVideoMiniPlayer", "expandedNetworkMiniPlayer"):
+              assert name in main, f"Missing independent state: {name}"
+          assert "expandedMiniPlayer" not in main
+          assert "VideoMiniPlayerSurface" in main and "NetworkMiniPlayerSurface" in main
+          assert 'listOf("Музыка", "Видео", "Сеть", "Плейлисты", "Ещё")' in main
+          assert 'PlaybackSessionQueues.save(context, "audio"' in main
+          assert 'PlaybackSessionQueues.save(context, "video"' in main
+          assert 'PlaybackSessionQueues.append(context, "network"' in main
+          assert 'player.setMediaItems(savedNetworkQueue, index, 0L)' in main
+          assert 'val kinds = setOf("audio", "video", "network")' in queues
+          assert "revision.intValue++" in queues
+          assert "tint = Color.White" in gothic
+          assert 'MediaController' in Path("app/src/main/java/com/chiyuri/player/MediaFileInfo.kt").read_text(encoding="utf-8")
+          print("Final feature, queue, white-icon, version and MediaController audit: passed")
+          PY
+          git diff --check
+          test -s app/src/main/java/com/chiyuri/player/PlaybackSessionQueues.kt
+          test -s app/src/main/java/com/chiyuri/player/MainActivity.kt
+
       - name: Ensure source is still latest main before building
         if: github.ref == 'refs/heads/main'
         run: |
