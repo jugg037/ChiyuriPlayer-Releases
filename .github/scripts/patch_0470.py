@@ -26,6 +26,6 @@ for file in ("SmbLibraryScreen.kt","WebDavLibraryScreen.kt"):
 f=p/"AudioEffectsController.kt"; s=f.read_text(encoding="utf-8")
 anchor="    private fun applySettings() {"
 if s.count(anchor)!=1: raise SystemExit("patch_0470: Virtualizer applySettings anchor mismatch")
-s=s.replace(anchor,"    @Suppress(\\"DEPRECATION\\") // The platform Virtualizer remains an optional compatibility effect.\\n"+anchor,1)
+s=s.replace(anchor,'    @Suppress("DEPRECATION") // The platform Virtualizer remains an optional compatibility effect.\n'+anchor,1)
 f.write_text(s,encoding="utf-8")
 print("patch_0470: migrated deprecated directional Compose icons to AutoMirrored variants and isolated Virtualizer strength deprecations")
