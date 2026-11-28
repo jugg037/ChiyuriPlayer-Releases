@@ -175,7 +175,7 @@ source_icon=Image.open(RES/"mipmap-xxxhdpi/ic_launcher.png").convert("RGBA")
 source_icon.save(foreground)
 mono=Image.new("RGBA",source_icon.size,(0,0,0,0))
 mono_pixels=[]
-for r,g,b,a in source_icon.getdata():
+for r,g,b,a in source_icon.get_flattened_data():
  luminance=0.2126*r+0.7152*g+0.0722*b
  alpha=max(0,min(255,int((luminance-48)*3.0)))
  alpha=alpha*a//255
