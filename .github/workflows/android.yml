@@ -62,6 +62,7 @@ on:
       - ".github/scripts/patch_0468.py"
       - ".github/scripts/patch_0469.py"
       - ".github/scripts/patch_0470.py"
+      - ".github/scripts/patch_0471.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
@@ -2293,7 +2294,7 @@ jobs:
       - name: Apply parallel audio, library, video, automation and network feature patches
         run: |
           set -euo pipefail
-          for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py .github/scripts/patch_0446.py .github/scripts/patch_0447.py .github/scripts/patch_0448.py .github/scripts/patch_0449.py .github/scripts/patch_0450.py .github/scripts/patch_0451.py .github/scripts/patch_0452.py .github/scripts/patch_0453.py .github/scripts/patch_0454.py .github/scripts/patch_0455.py .github/scripts/patch_0456.py .github/scripts/patch_0457.py .github/scripts/patch_0458.py .github/scripts/patch_0459.py .github/scripts/patch_0460.py .github/scripts/patch_0461.py .github/scripts/patch_0462.py .github/scripts/patch_0463.py .github/scripts/patch_0464.py .github/scripts/patch_0465.py .github/scripts/patch_0466.py .github/scripts/patch_0467.py .github/scripts/patch_0468.py .github/scripts/patch_0469.py .github/scripts/patch_0470.py; do
+          for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py .github/scripts/patch_0446.py .github/scripts/patch_0447.py .github/scripts/patch_0448.py .github/scripts/patch_0449.py .github/scripts/patch_0450.py .github/scripts/patch_0451.py .github/scripts/patch_0452.py .github/scripts/patch_0453.py .github/scripts/patch_0454.py .github/scripts/patch_0455.py .github/scripts/patch_0456.py .github/scripts/patch_0457.py .github/scripts/patch_0458.py .github/scripts/patch_0459.py .github/scripts/patch_0460.py .github/scripts/patch_0461.py .github/scripts/patch_0462.py .github/scripts/patch_0463.py .github/scripts/patch_0464.py .github/scripts/patch_0465.py .github/scripts/patch_0466.py .github/scripts/patch_0467.py .github/scripts/patch_0468.py .github/scripts/patch_0469.py .github/scripts/patch_0470.py .github/scripts/patch_0471.py; do
             echo "===== Applying $patch ====="
             python3 -u "$patch" | tee "patch_${patch##*_}.log"
           done
@@ -2744,9 +2745,14 @@ jobs:
           main = Path("app/src/main/java/com/chiyuri/player/MainActivity.kt").read_text(encoding="utf-8")
           queues = Path("app/src/main/java/com/chiyuri/player/PlaybackSessionQueues.kt").read_text(encoding="utf-8")
           gradle = Path("app/build.gradle.kts").read_text(encoding="utf-8")
+          root_gradle = Path("build.gradle.kts").read_text(encoding="utf-8")
+          wrapper = Path("gradle/wrapper/gradle-wrapper.properties").read_text(encoding="utf-8")
           gothic = Path("app/src/main/java/com/chiyuri/player/GothicUi.kt").read_text(encoding="utf-8")
           assert 'versionName = "0.6.0"' in gradle
           assert 'orElse("444")' in gradle
+          assert 'com.android.application") version "9.5.0"' in root_gradle
+          assert 'org.jetbrains.kotlin.plugin.compose") version "2.4.10"' in root_gradle
+          assert "gradle-9.9.3-bin.zip" in wrapper
           for name in ("expandedAudioMiniPlayer", "expandedVideoMiniPlayer", "expandedNetworkMiniPlayer"):
               assert name in main, f"Missing independent state: {name}"
           assert "expandedMiniPlayer" not in main
