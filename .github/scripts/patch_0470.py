@@ -29,6 +29,8 @@ for file in ("SmbLibraryScreen.kt","WebDavLibraryScreen.kt"):
  target.write_text(source,encoding="utf-8")
  add_import(file,"import androidx.compose.material.icons.automirrored.filled.PlaylistAdd")
 f=p/"AudioEffectsController.kt"; s=f.read_text(encoding="utf-8")
+if not s.startswith('@file:Suppress("DEPRECATION")'):
+ s='@file:Suppress("DEPRECATION") // The legacy session Virtualizer is retained as a guarded compatibility effect.\n'+s
 anchor="    private fun applySettings() {"
 if s.count(anchor)!=1: raise SystemExit("patch_0470: Virtualizer applySettings anchor mismatch")
 s=s.replace(anchor,'    @Suppress("DEPRECATION") // The platform Virtualizer remains an optional compatibility effect.\n'+anchor,1)
