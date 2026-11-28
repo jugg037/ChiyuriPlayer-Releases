@@ -2749,7 +2749,10 @@ jobs:
           assert 'listOf("Музыка", "Видео", "Сеть", "Плейлисты", "Ещё")' in main
           assert 'PlaybackSessionQueues.save(context, "audio"' in main
           assert 'PlaybackSessionQueues.save(context, "video"' in main
-          assert 'PlaybackSessionQueues.append(context, "network"' in main
+          smb = Path("app/src/main/java/com/chiyuri/player/SmbLibraryScreen.kt").read_text(encoding="utf-8")
+          streams = Path("app/src/main/java/com/chiyuri/player/NetworkStreamCard.kt").read_text(encoding="utf-8")
+          assert 'PlaybackSessionQueues.append(context, "network"' in smb
+          assert 'PlaybackSessionQueues.append(context, "network"' in streams
           assert 'player.setMediaItems(savedNetworkQueue, index, 0L)' in main
           assert 'val kinds = setOf("audio", "video", "network")' in queues
           assert "revision.intValue++" in queues
