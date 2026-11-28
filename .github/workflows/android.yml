@@ -2,7 +2,7 @@ name: Android release build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "release/0.6.0" ]
     paths:
       - ".github/workflows/android.yml"
       - ".github/scripts/patch_0412.py"
@@ -53,6 +53,16 @@ on:
       - ".github/scripts/patch_0459.py"
       - ".github/scripts/patch_0460.py"
       - ".github/scripts/patch_0461.py"
+      - ".github/scripts/patch_0462.py"
+      - ".github/scripts/patch_0463.py"
+      - ".github/scripts/patch_0464.py"
+      - ".github/scripts/patch_0465.py"
+      - ".github/scripts/patch_0466.py"
+      - ".github/scripts/patch_0467.py"
+      - ".github/scripts/patch_0468.py"
+      - ".github/scripts/patch_0469.py"
+      - ".github/scripts/patch_0470.py"
+      - ".github/scripts/patch_0471.py"
       - "chiyuri_emblem.png"
       - ".github/assets/chiyuri_background.webp"
       - ".github/scripts/patch_0415.py"
@@ -71,11 +81,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      APP_VERSION_NAME: "0.5.10"
-      APP_VERSION_CODE: "346"
+      APP_VERSION_NAME: "0.6.0"
+      APP_VERSION_CODE: "444"
     steps:
       - name: Checkout public release repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Verify source archive
         run: |
@@ -2284,7 +2294,7 @@ jobs:
       - name: Apply parallel audio, library, video, automation and network feature patches
         run: |
           set -euo pipefail
-          for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py .github/scripts/patch_0446.py .github/scripts/patch_0447.py .github/scripts/patch_0448.py .github/scripts/patch_0449.py .github/scripts/patch_0450.py .github/scripts/patch_0451.py .github/scripts/patch_0452.py .github/scripts/patch_0453.py .github/scripts/patch_0454.py .github/scripts/patch_0455.py .github/scripts/patch_0456.py .github/scripts/patch_0457.py .github/scripts/patch_0458.py .github/scripts/patch_0459.py .github/scripts/patch_0460.py .github/scripts/patch_0461.py; do
+          for patch in .github/scripts/patch_0435.py .github/scripts/patch_0436.py .github/scripts/patch_0437.py .github/scripts/patch_0438.py .github/scripts/patch_0439.py .github/scripts/patch_0440.py .github/scripts/patch_0441.py .github/scripts/patch_0442.py .github/scripts/patch_0443.py .github/scripts/patch_0444.py .github/scripts/patch_0445.py .github/scripts/patch_0446.py .github/scripts/patch_0447.py .github/scripts/patch_0448.py .github/scripts/patch_0449.py .github/scripts/patch_0450.py .github/scripts/patch_0451.py .github/scripts/patch_0452.py .github/scripts/patch_0453.py .github/scripts/patch_0454.py .github/scripts/patch_0455.py .github/scripts/patch_0456.py .github/scripts/patch_0457.py .github/scripts/patch_0458.py .github/scripts/patch_0459.py .github/scripts/patch_0460.py .github/scripts/patch_0461.py .github/scripts/patch_0462.py .github/scripts/patch_0463.py .github/scripts/patch_0464.py .github/scripts/patch_0465.py .github/scripts/patch_0466.py .github/scripts/patch_0467.py .github/scripts/patch_0468.py .github/scripts/patch_0469.py .github/scripts/patch_0470.py .github/scripts/patch_0471.py; do
             echo "===== Applying $patch ====="
             python3 -u "$patch" | tee "patch_${patch##*_}.log"
           done
@@ -2334,11 +2344,18 @@ jobs:
           grep -F "30_000f" "$PKG/VideoGestureMath.kt"
           grep -F "0.5f" "$PKG/VideoGestureMath.kt"
           grep -F "lastPage" "$PKG/MediaLibraryPaging.kt"
-          grep -F "versionName = \"0.5.10\"" app/build.gradle.kts
-          grep -F 'orElse("346")' app/build.gradle.kts
+          grep -F "versionName = \"0.6.0\"" app/build.gradle.kts
+          grep -F 'orElse("444")' app/build.gradle.kts
           for test in EqualizerPresetsTest.kt AudioEffectsSettingsTest.kt PlaybackHistoryStoreTest.kt MediaLibrarySortingTest.kt RadioStationStoreTest.kt VideoGestureMathTest.kt PlaybackOutputReconnectTest.kt AudioOutputProfileKeyTest.kt MediaLibraryPaginationTest.kt SmbAddressTest.kt LibraryBackupManagerTest.kt ReplayGainReaderTest.kt PlaybackWidgetActionsTest.kt LocalRecommendationsTest.kt MediaFileInfoFormattingTest.kt WebDavAddressTest.kt MediaLibraryHealthTest.kt VideoFrameCaptureTest.kt PlaybackPreferencesTest.kt DlnaSsdpParserTest.kt; do
             test -s "$TEST/$test"
           done
+          test -s "$PKG/PlaybackSessionQueues.kt"
+          grep -F 'PlaybackSessionQueues.save(context, "audio"' "$PKG/MainActivity.kt"
+          grep -F 'PlaybackSessionQueues.save(context, "video"' "$PKG/MainActivity.kt"
+          grep -F 'PlaybackSessionQueues.append(context, "network"' "$PKG/SmbLibraryScreen.kt"
+          grep -F 'PlaybackSessionQueues.revision.intValue' "$PKG/MainActivity.kt"
+          grep -F 'player.setMediaItems(savedNetworkQueue, index, 0L)' "$PKG/MainActivity.kt"
+          grep -F 'NetworkStreamCard(player)' "$PKG/MainActivity.kt"
           test -s "$PKG/PlaybackPreferencesStore.kt"
           grep -F "setPauseAtEndOfMediaItems" "$PKG/PlaybackService.kt"
           test -s "$PKG/LocalRecommendations.kt"
@@ -2380,7 +2397,7 @@ jobs:
           grep -F "parseSsdpResponse" "$PKG/DlnaDiscoveryClient.kt"
           grep -F "DlnaDiscoveryClient.discover" "$PKG/DlnaDiscoveryScreen.kt"
           grep -F "CHANGE_WIFI_MULTICAST_STATE" app/src/main/AndroidManifest.xml
-          grep -F 'versionName = "0.5.10"' app/build.gradle.kts
+          grep -F 'versionName = "0.6.0"' app/build.gradle.kts
           echo "PASS: twenty-six feature patches, WebDAV and DLNA discovery, spatial audio, smooth track transitions, media integrity scanning, video frame capture, file inspection, gapless playback, local recommendations, party mix and complete credential-free backups are integrated."
 
       - name: Verify automatic device sensor orientation and fullscreen override
@@ -2396,8 +2413,8 @@ jobs:
           grep -F 'Включить автоматическую ориентацию' "$MAIN"
           grep -F 'rememberSaveable { mutableStateOf(false) }' "$MAIN"
           grep -F 'LaunchedEffect(hostActivity, currentMediaUri, isVideoFullscreen, fullscreenVideoPortrait, playing)' "$MAIN"
-          grep -F 'versionName = "0.5.10"' app/build.gradle.kts
-          grep -F 'orElse("346")' app/build.gradle.kts
+          grep -F 'versionName = "0.6.0"' app/build.gradle.kts
+          grep -F 'orElse("444")' app/build.gradle.kts
           echo "PASS: audio/video playback follows all device sensor orientations; fullscreen video can temporarily lock portrait and return to automatic mode."
 
       - name: Verify all four requested features
@@ -2411,7 +2428,20 @@ jobs:
           grep -F 'onDeleteTrack = { showDeleteConfirmation = true }' "$MAIN"
           grep -F 'CustomEqualizerPresetStore.save(context, customPresetName, config.bandsDb)' "$MAIN"
           grep -F 'CustomEqualizerPresetStore.delete(context, preset.name)' "$MAIN"
-          grep -F 'heightIn(max = 480.dp).aspectRatio(16f / 9f)' "$MAIN"
+          grep -F 'VideoMiniPlayerSurface' "$MAIN"
+          grep -F 'NetworkMiniPlayerSurface' "$MAIN"
+          grep -F 'expandedAudioMiniPlayer' "$MAIN"
+          grep -F 'expandedVideoMiniPlayer' "$MAIN"
+          grep -F 'expandedNetworkMiniPlayer' "$MAIN"
+          ! grep -F 'expandedMiniPlayer' "$MAIN"
+          grep -F 'if (tab == "Сеть")' "$MAIN"
+          grep -F 'listOf("Музыка", "Видео", "Сеть", "Плейлисты", "Ещё")' "$MAIN"
+          ! grep -R -F "createTempDir(" app/src/test
+          ! grep -F "source_icon.getdata()" .github/scripts/patch_0426.py
+          grep -F '@file:Suppress("DEPRECATION")' app/src/main/java/com/chiyuri/player/AudioEffectsController.kt
+          ! grep -R -E 'Icons.Default.(QueueMusic|ArrowBack|PlaylistAdd)' app/src/main/java/com/chiyuri/player
+          test -s app/src/main/java/com/chiyuri/player/PlaybackSessionQueues.kt
+          grep -F 'tint = Color.White' app/src/main/java/com/chiyuri/player/GothicUi.kt
           ! grep -F 'screenOrientation=' app/src/main/AndroidManifest.xml
           test -s app/src/main/java/com/chiyuri/player/CustomEqualizerPresets.kt
           test -s app/src/test/java/com/chiyuri/player/CustomEqualizerPresetNameTest.kt
@@ -2442,7 +2472,7 @@ jobs:
 
       - name: Upload patch remediation diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ChiyuriPlayer-patch-0426-diagnostics-${{ github.run_number }}
           path: patch_0426.log
@@ -2469,10 +2499,10 @@ jobs:
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsScreen.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/TrackDetailsComponents.kt
           grep -F 'BloodLoader(progress = null' app/src/main/java/com/chiyuri/player/LyricsMiniPanel.kt
-          grep -F 'orElse("346")' app/build.gradle.kts
+          grep -F 'orElse("444")' app/build.gradle.kts
           echo "Original PNG alpha-masked blood texture, clockwise loader and all integrations verified."
 
-      - name: Full pre-build audit for v0.5.10
+      - name: Full pre-build audit for v0.6.0
         run: |
           set -eu
           MINI=app/src/main/java/com/chiyuri/player/LyricsMiniPanel.kt
@@ -2490,7 +2520,7 @@ jobs:
           grep -F '0xFFFF263F.toInt()' "$LOADER"
           grep -F '0xFF240008.toInt()' "$LOADER"
           grep -F '0x66FF1E36' "$LOADER"
-          grep -F 'orElse("346")' app/build.gradle.kts
+          grep -F 'orElse("444")' app/build.gradle.kts
           grep -F 'Установлена версия " + AppUpdates.CURRENT_VERSION + " - " + AppUpdates.CURRENT_VERSION_CODE' "$UPDATES"
           echo "PASS: emblem, centered fit layout, dark scarlet texture, visual progress, no mini-player internet lookup and versionName-versionCode."
 
@@ -2525,13 +2555,13 @@ jobs:
           test ! -e app/src/main/res/values/colors.xml
           grep -F 'mutableIntStateOf(0)' "$MAIN"
           ! grep -R -E 'Uri\.parse\(|\.edit\(\)\.put|Bitmap\.createScaledBitmap|\.getPixel\(' app/src/main/java/com/chiyuri/player
-          grep -F 'versionName = "0.5.10"' "$GRADLE"
-          grep -F 'orElse("346")' "$GRADLE"
+          grep -F 'versionName = "0.6.0"' "$GRADLE"
+          grep -F 'orElse("444")' "$GRADLE"
           echo "Android 17 edge-to-edge, local-network permission, trusted media session, ABI, KTX and resources verified."
 
       - name: Upload platform audit diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ChiyuriPlayer-platform-audit-${{ github.run_number }}
           path: platform-audit.log
@@ -2599,7 +2629,7 @@ jobs:
           echo "Update install action is bound to the exact discovered versionCode."
 
       - name: Upload patched source for metadata audit
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ChiyuriPlayer-source-audit-${{ github.run_number }}
           path: |
@@ -2616,13 +2646,13 @@ jobs:
           retention-days: 3
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
           packages: platform-tools
 
@@ -2637,7 +2667,7 @@ jobs:
           test -f "$ANDROID_HOME/platforms/android-37/android.jar"
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "9.9.3"
 
@@ -2656,11 +2686,11 @@ jobs:
       - name: Run unit tests
         run: |
           set -o pipefail
-          gradle testDebugUnitTest -PVERSION_CODE=${APP_VERSION_CODE} 2>&1 | tee unit-tests.log
+          gradle testDebugUnitTest --warning-mode all -PVERSION_CODE=${APP_VERSION_CODE} 2>&1 | tee unit-tests.log
 
       - name: Upload unit test diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ChiyuriPlayer-unit-test-diagnostics-${{ github.run_number }}
           path: |
@@ -2673,11 +2703,11 @@ jobs:
       - name: Run Android lint
         id: android_lint
         continue-on-error: true
-        run: gradle lintRelease -PVERSION_CODE=${APP_VERSION_CODE}
+        run: gradle lintRelease --warning-mode all -PVERSION_CODE=${APP_VERSION_CODE}
 
       - name: Upload Android lint report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ChiyuriPlayer-lint-${{ github.run_number }}
           path: |
@@ -2704,7 +2734,50 @@ jobs:
             exit 1
           }
 
+      - name: Repeat full source and release audit after fixes
+        run: |
+          set -eu
+          python - <<'PY'
+          from pathlib import Path
+          scripts = sorted(Path(".github/scripts").glob("patch_*.py"))
+          for path in scripts:
+              compile(path.read_text(encoding="utf-8"), str(path), "exec")
+          print(f"Python patch syntax: {len(scripts)} scripts passed")
+          main = Path("app/src/main/java/com/chiyuri/player/MainActivity.kt").read_text(encoding="utf-8")
+          queues = Path("app/src/main/java/com/chiyuri/player/PlaybackSessionQueues.kt").read_text(encoding="utf-8")
+          gradle = Path("app/build.gradle.kts").read_text(encoding="utf-8")
+          root_gradle = Path("build.gradle.kts").read_text(encoding="utf-8")
+          wrapper = Path("gradle/wrapper/gradle-wrapper.properties").read_text(encoding="utf-8")
+          gothic = Path("app/src/main/java/com/chiyuri/player/GothicUi.kt").read_text(encoding="utf-8")
+          assert 'versionName = "0.6.0"' in gradle
+          assert 'orElse("444")' in gradle
+          assert 'com.android.application") version "9.5.0"' in root_gradle
+          assert 'org.jetbrains.kotlin.plugin.compose") version "2.4.10"' in root_gradle
+          assert "gradle-9.9.3-bin.zip" in wrapper
+          for name in ("expandedAudioMiniPlayer", "expandedVideoMiniPlayer", "expandedNetworkMiniPlayer"):
+              assert name in main, f"Missing independent state: {name}"
+          assert "expandedMiniPlayer" not in main
+          assert "VideoMiniPlayerSurface" in main and "NetworkMiniPlayerSurface" in main
+          assert 'listOf("Музыка", "Видео", "Сеть", "Плейлисты", "Ещё")' in main
+          assert 'PlaybackSessionQueues.save(context, "audio"' in main
+          assert 'PlaybackSessionQueues.save(context, "video"' in main
+          smb = Path("app/src/main/java/com/chiyuri/player/SmbLibraryScreen.kt").read_text(encoding="utf-8")
+          streams = Path("app/src/main/java/com/chiyuri/player/NetworkStreamCard.kt").read_text(encoding="utf-8")
+          assert 'PlaybackSessionQueues.append(context, "network"' in smb
+          assert 'PlaybackSessionQueues.append(context, "network"' in streams
+          assert 'player.setMediaItems(savedNetworkQueue, index, 0L)' in main
+          assert 'val kinds = setOf("audio", "video", "network")' in queues
+          assert "revision.intValue++" in queues
+          assert "tint = Color.White" in gothic
+          assert 'MediaController' in Path("app/src/main/java/com/chiyuri/player/MediaFileInfo.kt").read_text(encoding="utf-8")
+          print("Final feature, queue, white-icon, version and MediaController audit: passed")
+          PY
+          git diff --check
+          test -s app/src/main/java/com/chiyuri/player/PlaybackSessionQueues.kt
+          test -s app/src/main/java/com/chiyuri/player/MainActivity.kt
+
       - name: Ensure source is still latest main before building
+        if: github.ref == 'refs/heads/main'
         run: |
           set -eu
           latest="$(git ls-remote origin refs/heads/main | cut -f1)"
@@ -2723,7 +2796,7 @@ jobs:
           test -n "$CHIYURI_KEYSTORE_PASSWORD"
           test -n "$CHIYURI_KEY_ALIAS"
           test -n "$CHIYURI_KEY_PASSWORD"
-          gradle --no-build-cache clean assembleRelease -PVERSION_CODE=${APP_VERSION_CODE}
+          gradle --no-build-cache clean assembleRelease --warning-mode all -PVERSION_CODE=${APP_VERSION_CODE}
 
       - name: Verify APK signature
         run: |
@@ -2740,7 +2813,7 @@ jobs:
           sha256sum "$APK" | tee ChiyuriPlayer-$APP_VERSION_NAME.sha256
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ChiyuriPlayer-${{ env.APP_VERSION_NAME }}
           path: |
@@ -2750,6 +2823,7 @@ jobs:
           retention-days: 30
 
       - name: Ensure source is still latest main before publishing
+        if: github.ref == 'refs/heads/main'
         run: |
           set -eu
           latest="$(git ls-remote origin refs/heads/main | cut -f1)"
@@ -2759,15 +2833,19 @@ jobs:
           fi
 
       - name: Publish GitHub Release
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.APP_VERSION_NAME }}
           name: ChiyuriPlayer ${{ env.APP_VERSION_NAME }}
           body: |
-            - Добавлено обнаружение DLNA/UPnP медиасерверов в локальной сети через SSDP.
-            - Поиск ограничен локальными адресами; приложение не загружает содержимое серверов и не включает произвольный HTTP-трафик.
-            - Добавлена поддержка системного разрешения доступа к локальной сети Android 17 и необходимых Wi-Fi multicast permissions.
-            Версия приложения: 0.5.10 - 346.
+            - Интерфейс разделён на три привязанных к вкладкам мини-плеера: музыка, видео и сеть.
+            - Добавлена отдельная вкладка «Сеть» с интернет-потоками, SMB, WebDAV и обнаружением DLNA/UPnP серверов.
+            - Добавлены отдельные сохраняемые очереди музыки, видео и сетевого воспроизведения; сетевую очередь можно собирать из файлов SMB/WebDAV и потоков.
+            - Окно видео перенесено в видеомини-плеер; сетевое видео остаётся во вкладке «Сеть» с полноэкранным управлением.
+            - Иконки кнопок приведены к белому цвету; состояния раскрытия трёх мини-плееров независимы.
+            - Исправлен вызов MediaController в окне «Сведения о файле» с фоновой coroutine.
+            Версия приложения: 0.6.0 - 444.
           files: |
             app/build/outputs/apk/release/app-release.apk
             ChiyuriPlayer-${{ env.APP_VERSION_NAME }}.sha256
